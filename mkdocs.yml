@@ -1,4 +1,10 @@
 site_name: MikroTik Field Guide | The Packet Drop
+site_description: Practical engineering documentation for MikroTik RouterOS
+site_author: xdenb43
+site_url: https://xdenb43.github.io/mikrotik-wizardbook/
+
+repo_name: xdenb43/mikrotik-wizardbook
+repo_url: https://github.com/xdenb43/mikrotik-wizardbook
 
 theme:
   name: windmill
