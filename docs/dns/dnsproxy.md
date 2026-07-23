@@ -73,7 +73,7 @@ add cmd="--listen=0.0.0.0 --port=53 \
 
 ```bash
 /ip/dhcp-server/network/set dns-server=192.168.254.11
-/ip dns set allow-remote-requests=yes
+/ip dns set allow-remote-requests=no
 ```
 Recommended values
 ```bash
