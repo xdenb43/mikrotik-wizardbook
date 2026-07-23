@@ -10,7 +10,7 @@ Good official doc: <https://manual.mikrotik.com/docs/network-management/dns#adli
     - Adlist is stored on device's internal memory. Ensure that there is <u>enough free space</u> to save the desired adlist.  
 
 !!! warning "not recommended for"  
-    [Low-end devices](architecture.md/#low-end-devices)  
+    [Low-end devices](../architecture/device-selection.md/#low-end-devices)  
 
 ---  
 

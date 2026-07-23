@@ -30,8 +30,11 @@ markdown_extensions:
 
 plugins:
   - search
+  - macros:
+      module_name: main
 
 nav:
+  - Home: index.md
   - '🏛️ Device classes':
       - 'Architecture guide': architecture/device-selection.md
   - '🌐 IP':

@@ -14,9 +14,14 @@ def git(*args):
 
 def define_env(env):
 
-    env.variables["last_updated"] = git(
+    date = git(
         "log",
         "-1",
         "--date=short",
         "--format=%cd"
     )
+
+    if date == "unknown":
+        date = "unknown"
+
+    env.conf["extra"]["last_updated"] = date
