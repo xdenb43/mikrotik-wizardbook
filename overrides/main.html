@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block extrahead %}
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    // Находим iframe, в котором тема Windmill отображает контент статьи
+    var iframe = document.getElementById('wm-article-frame') || document.querySelector('iframe');
+    
+    if (iframe) {
+      // Функция для обработки ссылок внутри iframe
+      function processIframeLinks() {
+        try {
+          var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+          // Ищем все внешние ссылки, которые начинаются с http/https
+          var links = iframeDoc.querySelectorAll('a[href^="http"]');
+          links.forEach(function(link) {
+            // Проверяем, что ссылка действительно внешняя (не ведет на наш локальный домен)
+            if (!link.href.includes(window.location.host)) {
+              link.setAttribute('target', '_blank');
+              link.setAttribute('rel', 'noopener noreferrer'); // Защита безопасности [1.12, 1.16, 1.17]
+            }
+          });
+        } catch (e) {
+          console.log("Iframe еще не доступен или заблокирован CORS:", e);
+        }
+      }
+
+      // Запускаем обработку при полной загрузке iframe
+      iframe.addEventListener('load', processIframeLinks);
+      // На всякий случай дублируем вызов (если iframe загрузился быстрее скрипта)
+      processIframeLinks();
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,48 @@
+site_name: MikroTik Field Guide | The Packet Drop
+
+theme:
+  name: windmill
+  custom_dir: overrides
+
+hooks:
+  - hooks/git_info.py
+  
+extra:  
+  # logo: 'images/my_logo.png'
+  history_buttons: false # history next/prev bottom panel
+  article_nav_top: false # next/perv articale
+  article_nav_bottom: true # next/perv articale
+
+extra_css:
+  - css/custom.css
+  
+markdown_extensions:
+  - admonition 
+  - attr_list
+  - toc:
+      toc_depth: 2-3
+
+plugins:
+  - search
+
+nav:
+  - '🏛️ Device classes':
+      - 'Architecture guide': architecture/device-selection.md
+  - '🌐 IP':
+    - 'DNS':
+        - 'AdList - Ads blocker': dns/adlist.md
+        - 'AdGuard dnsproxy': dns/dnsproxy.md
+        - 'DNS over HTTPs (DoH)': dns/doh.md
+        - 'DoH certificates': dns/doh_minimum_certificates.md
+  - '🧱 Firewall':
+      - 'FastTrack': firewall/fasttrack.md
+  - '📜 Scripts':
+      - 'Check RoS update': scripts/check_ros_update.md
+      - 'Delayed containers start': scripts/container_delayed_start.md
+      - 'Telegram informer': scripts/logEventTGInformer.md
+  - '🛠️ Utilities':
+      - 'NTP': utilities/ntp.md
+  - '🔐 Virtual Private Network':
+      - 'L2TP/IPsec client': vpn/l2tp_ipsec_client.md
+  - '📶 WiFi':
+      - 'Wireless package': wifi/wireless.md
