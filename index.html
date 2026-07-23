@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+  
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Practical engineering documentation for MikroTik RouterOS">
+    <meta name="author" content="xdenb43">
+    <link rel="canonical" href="https://xdenb43.github.io/mikrotik-wizardbook/">
+    <link rel="shortcut icon" href="./img/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <title>MikroTik Field Guide | The Packet Drop</title>
+    <link href="./css/bootstrap-3.3.7.min.css" rel="stylesheet">
+    <link href="./css/font-awesome-4.7.0.css" rel="stylesheet">
+    <link href="./css/base.css" rel="stylesheet">
+    <link rel="stylesheet" href="./css/highlight.css">
+    <link href="css/custom.css" rel="stylesheet">
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
+
+    <script src="./js/jquery-3.2.1.min.js"></script>
+    <script src="./js/bootstrap-3.3.7.min.js"></script>
+    <script src="./js/highlight.pack.js"></script>
+    
+      <script src="./js/elasticlunr.min.js"></script>
+    
+    <base target="_top">
+    <script>
+      var base_url = '.';
+      var is_top_frame = (window === window.parent);
+        
+        var pageToc = [
+          {title: "What is this project?", url: "#_top", children: [
+          ]},
+          {title: "Intended audience", url: "#intended-audience", children: [
+          ]},
+          {title: "Documentation principles", url: "#documentation-principles", children: [
+          ]},
+          {title: "Project goals", url: "#project-goals", children: [
+          ]},
+          {title: "Contributing", url: "#contributing", children: [
+          ]},
+        ];
+
+    </script>
+    <script src="./js/base.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    // Находим iframe, в котором тема Windmill отображает контент статьи
+    var iframe = document.getElementById('wm-article-frame') || document.querySelector('iframe');
+    
+    if (iframe) {
+      // Функция для обработки ссылок внутри iframe
+      function processIframeLinks() {
+        try {
+          var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+          // Ищем все внешние ссылки, которые начинаются с http/https
+          var links = iframeDoc.querySelectorAll('a[href^="http"]');
+          links.forEach(function(link) {
+            // Проверяем, что ссылка действительно внешняя (не ведет на наш локальный домен)
+            if (!link.href.includes(window.location.host)) {
+              link.setAttribute('target', '_blank');
+              link.setAttribute('rel', 'noopener noreferrer'); // Защита безопасности [1.12, 1.16, 1.17]
+            }
+          });
+        } catch (e) {
+          console.log("Iframe еще не доступен или заблокирован CORS:", e);
+        }
+      }
+
+      // Запускаем обработку при полной загрузке iframe
+      iframe.addEventListener('load', processIframeLinks);
+      // На всякий случай дублируем вызов (если iframe загрузился быстрее скрипта)
+      processIframeLinks();
+    }
+  });
+</script>
+
+</head>
+
+<body>
+<script>
+if (is_top_frame) { $('body').addClass('wm-top-page'); }
+</script>
+
+<nav class="navbar wm-page-top-frame">
+  <div class="container-fluid wm-top-container">
+    
+    <div class="wm-top-tool pull-right wm-vcenter">
+      <form class="dropdown wm-vcentered" id="wm-search-form" action="./search.html">
+        
+        <button id="wm-search-show" class="btn btn-sm btn-default" type="submit"
+          ><i class="fa fa-search" aria-hidden="true"></i></button>
+
+        <div class="input-group input-group-sm wm-top-search">
+          <input type="text" name="q" class="form-control" id="mkdocs-search-query" placeholder="Search" autocomplete="off">
+          <span class="input-group-btn" role="search">
+            
+            <button class="btn btn-default dropdown-toggle collapse" data-toggle="dropdown" type="button"><span class="caret"></span></button>
+            <ul id="mkdocs-search-results" class="dropdown-menu dropdown-menu-right"></ul>
+            <button id="wm-search-go" class="btn btn-default" type="submit"><i class="fa fa-search" aria-hidden="true"></i></button>
+          </span>
+        </div>
+      </form>
+    </div>
+
+    
+    <div class="wm-top-tool wm-vcenter pull-right wm-small-left">
+      <button id="wm-toc-button" type="button" class="btn btn-sm btn-default wm-vcentered"><i class="fa fa-th-list" aria-hidden="true"></i></button>
+    </div>
+
+    
+    
+
+    
+    <a href="" class="wm-top-brand wm-top-link wm-vcenter">
+      
+      <div class="wm-top-title">
+        MikroTik Field Guide | The Packet Drop<br>
+        <span class="wm-top-version">
+            Updated 
+        </span>
+      </div>
+    </a>
+  </div>
+</nav>
+
+  <div id="main-content" class="wm-page-top-frame">
+    
+<nav class="wm-toc-pane">
+  
+    <ul class="wm-toctree wm-toc-repo">
+      <li class="wm-toc-li wm-toc-lev1">
+      <a class="wm-article-link wm-toc-text" href="https://github.com/xdenb43/mikrotik-wizardbook">
+        
+        xdenb43/mikrotik-wizardbook
+      </a>
+      </li>
+    </ul>
+  <ul class="wm-toctree">
+        <li class="wm-toc-li wm-toc-lev1 wm-toc-opener"><span class="wm-toc-text">🏛️ Device classes</span>
+</li>
+<li class="wm-toc-li-nested collapse">
+  <ul class="wm-toctree">
+      <li class="wm-toc-li wm-toc-lev2 "><a href="architecture/device-selection/" class="wm-article-link wm-toc-text">Architecture guide</a>
+</li>
+  </ul>
+</li>
+
+        <li class="wm-toc-li wm-toc-lev1 wm-toc-opener"><span class="wm-toc-text">🌐 IP</span>
+</li>
+<li class="wm-toc-li-nested collapse">
+  <ul class="wm-toctree">
+      <li class="wm-toc-li wm-toc-lev2 wm-toc-opener"><span class="wm-toc-text">DNS</span>
+</li>
+<li class="wm-toc-li-nested collapse">
+  <ul class="wm-toctree">
+      <li class="wm-toc-li wm-toc-lev3 "><a href="dns/adlist/" class="wm-article-link wm-toc-text">AdList - Ads blocker</a>
+</li>
+      <li class="wm-toc-li wm-toc-lev3 "><a href="dns/dnsproxy/" class="wm-article-link wm-toc-text">AdGuard dnsproxy</a>
+</li>
+      <li class="wm-toc-li wm-toc-lev3 "><a href="dns/doh/" class="wm-article-link wm-toc-text">DNS over HTTPs (DoH)</a>
+</li>
+      <li class="wm-toc-li wm-toc-lev3 "><a href="dns/doh_minimum_certificates/" class="wm-article-link wm-toc-text">DoH certificates</a>
+</li>
+  </ul>
+</li>
+
+  </ul>
+</li>
+
+        <li class="wm-toc-li wm-toc-lev1 wm-toc-opener"><span class="wm-toc-text">🧱 Firewall</span>
+</li>
+<li class="wm-toc-li-nested collapse">
+  <ul class="wm-toctree">
+      <li class="wm-toc-li wm-toc-lev2 "><a href="firewall/fasttrack/" class="wm-article-link wm-toc-text">FastTrack</a>
+</li>
+  </ul>
+</li>
+
+        <li class="wm-toc-li wm-toc-lev1 wm-toc-opener"><span class="wm-toc-text">📜 Scripts</span>
+</li>
+<li class="wm-toc-li-nested collapse">
+  <ul class="wm-toctree">
+      <li class="wm-toc-li wm-toc-lev2 "><a href="scripts/check_ros_update/" class="wm-article-link wm-toc-text">Check RoS update</a>
+</li>
+      <li class="wm-toc-li wm-toc-lev2 "><a href="scripts/container_delayed_start/" class="wm-article-link wm-toc-text">Delayed containers start</a>
+</li>
+      <li class="wm-toc-li wm-toc-lev2 "><a href="scripts/logEventTGInformer/" class="wm-article-link wm-toc-text">Telegram informer</a>
+</li>
+  </ul>
+</li>
+
+        <li class="wm-toc-li wm-toc-lev1 wm-toc-opener"><span class="wm-toc-text">🛠️ Utilities</span>
+</li>
+<li class="wm-toc-li-nested collapse">
+  <ul class="wm-toctree">
+      <li class="wm-toc-li wm-toc-lev2 "><a href="utilities/ntp/" class="wm-article-link wm-toc-text">NTP</a>
+</li>
+  </ul>
+</li>
+
+        <li class="wm-toc-li wm-toc-lev1 wm-toc-opener"><span class="wm-toc-text">🔐 Virtual Private Network</span>
+</li>
+<li class="wm-toc-li-nested collapse">
+  <ul class="wm-toctree">
+      <li class="wm-toc-li wm-toc-lev2 "><a href="vpn/l2tp_ipsec_client/" class="wm-article-link wm-toc-text">L2TP/IPsec client</a>
+</li>
+  </ul>
+</li>
+
+        <li class="wm-toc-li wm-toc-lev1 wm-toc-opener"><span class="wm-toc-text">📶 WiFi</span>
+</li>
+<li class="wm-toc-li-nested collapse">
+  <ul class="wm-toctree">
+      <li class="wm-toc-li wm-toc-lev2 "><a href="wifi/wireless/" class="wm-article-link wm-toc-text">Wireless package</a>
+</li>
+  </ul>
+</li>
+
+  </ul>
+</nav>
+
+    <div class="wm-content-pane">
+      <iframe class="wm-article" name="article"></iframe>
+    </div>
+  </div>
+
+<div class="container-fluid wm-page-content">
+  <a name="_top"></a>
+    
+
+    <h1 id="mikrotik-field-guide">MikroTik Field Guide</h1>
+<blockquote>
+<p>A practical engineering handbook for MikroTik RouterOS.</p>
+</blockquote>
+<p>Welcome to <strong>MikroTik WizardBook</strong> — a curated collection of real-world RouterOS knowledge, architecture decisions, deployment guides, troubleshooting notes, and production-ready configuration examples.</p>
+<p>This project is built from practical experience rather than theoretical documentation. Every article is written to explain not only <strong>how</strong> to configure RouterOS, but also <strong>why</strong> a particular solution was chosen, where it should be used, and what limitations should be considered.</p>
+<hr />
+<h2 id="what-is-this-project">What is this project?</h2>
+<p>Unlike the official MikroTik documentation, this WizardBook focuses on practical engineering scenarios:</p>
+<ul>
+<li>Production-ready RouterOS configurations</li>
+<li>Design and architecture recommendations</li>
+<li>Security hardening</li>
+<li>Performance optimization</li>
+<li>Deployment best practices</li>
+<li>Troubleshooting techniques</li>
+<li>Reusable RouterOS scripts</li>
+<li>Hardware selection guidelines</li>
+</ul>
+<p>Every configuration example is intended to be understandable, maintainable, and suitable for real deployments.</p>
+<hr />
+<h2 id="intended-audience">Intended audience</h2>
+<p>This documentation is intended for:</p>
+<ul>
+<li>Network Engineers</li>
+<li>System Administrators</li>
+<li>Home Lab enthusiasts</li>
+<li>Small Business deployments</li>
+<li>Anyone learning MikroTik RouterOS</li>
+</ul>
+<p>Whether you are configuring your first MikroTik router or maintaining dozens of devices, the goal is to provide practical guidance instead of isolated configuration snippets.</p>
+<hr />
+<h2 id="documentation-principles">Documentation principles</h2>
+<p>Every article follows several simple principles:</p>
+<ul>
+<li>Explain <strong>why</strong>, not only <strong>how</strong></li>
+<li>Prefer production-ready configurations</li>
+<li>Keep examples simple and reproducible</li>
+<li>Document limitations and side effects</li>
+<li>Avoid unnecessary complexity</li>
+<li>Follow RouterOS best practices whenever possible</li>
+</ul>
+<hr />
+<h2 id="project-goals">Project goals</h2>
+<p>This project aims to become a long-term engineering reference for MikroTik RouterOS by providing documentation that is:</p>
+<ul>
+<li>Practical</li>
+<li>Accurate</li>
+<li>Easy to navigate</li>
+<li>Easy to reproduce</li>
+<li>Continuously maintained</li>
+</ul>
+<hr />
+<h2 id="contributing">Contributing</h2>
+<p>Suggestions, corrections, and discussions are always welcome.</p>
+<p>If you discover inaccurate information, an outdated recommendation, or a better engineering approach, please consider opening an Issue or submitting a Pull Request.</p>
+<hr />
+<p><em>Knowledge is valuable only when it can be shared, understood, and reproduced.</em></p>
+
+  <br>
+    
+
+    <br>
+</div>
+
+<footer class="container-fluid wm-page-content">
+      <p>
+        <a href="https://github.com/xdenb43/mikrotik-wizardbook/edit/master/docs/index.md">Edit on xdenb43/mikrotik-wizardbook</a>
+      </p>
+  <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a> using <a href="https://github.com/gristlabs/mkdocs-windmill">Windmill</a> theme by Grist Labs.</p>
+</footer>
+
+</body>
+</html>
+<!--
+MkDocs version : 1.6.1
+Build Date UTC : 2026-07-23 12:24:53.228866+00:00
+-->

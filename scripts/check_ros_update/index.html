@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+  
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <meta name="author" content="xdenb43">
+    <link rel="canonical" href="https://xdenb43.github.io/mikrotik-wizardbook/scripts/check_ros_update/">
+    <link rel="shortcut icon" href="../../img/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <title>Check RoS update - MikroTik Field Guide | The Packet Drop</title>
+    <link href="../../css/bootstrap-3.3.7.min.css" rel="stylesheet">
+    <link href="../../css/font-awesome-4.7.0.css" rel="stylesheet">
+    <link href="../../css/base.css" rel="stylesheet">
+    <link rel="stylesheet" href="../../css/highlight.css">
+    <link href="../../css/custom.css" rel="stylesheet">
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
+
+    <script src="../../js/jquery-3.2.1.min.js"></script>
+    <script src="../../js/bootstrap-3.3.7.min.js"></script>
+    <script src="../../js/highlight.pack.js"></script>
+    
+    <base target="_top">
+    <script>
+      var base_url = '../..';
+      var is_top_frame = false;
+        
+        var pageToc = [
+          {title: "Logic", url: "#_top", children: [
+          ]},
+          {title: "How To Use", url: "#how-to-use", children: [
+          ]},
+          {title: "Code", url: "#code", children: [
+          ]},
+        ];
+
+    </script>
+    <script src="../../js/base.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    // Находим iframe, в котором тема Windmill отображает контент статьи
+    var iframe = document.getElementById('wm-article-frame') || document.querySelector('iframe');
+    
+    if (iframe) {
+      // Функция для обработки ссылок внутри iframe
+      function processIframeLinks() {
+        try {
+          var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+          // Ищем все внешние ссылки, которые начинаются с http/https
+          var links = iframeDoc.querySelectorAll('a[href^="http"]');
+          links.forEach(function(link) {
+            // Проверяем, что ссылка действительно внешняя (не ведет на наш локальный домен)
+            if (!link.href.includes(window.location.host)) {
+              link.setAttribute('target', '_blank');
+              link.setAttribute('rel', 'noopener noreferrer'); // Защита безопасности [1.12, 1.16, 1.17]
+            }
+          });
+        } catch (e) {
+          console.log("Iframe еще не доступен или заблокирован CORS:", e);
+        }
+      }
+
+      // Запускаем обработку при полной загрузке iframe
+      iframe.addEventListener('load', processIframeLinks);
+      // На всякий случай дублируем вызов (если iframe загрузился быстрее скрипта)
+      processIframeLinks();
+    }
+  });
+</script>
+
+</head>
+
+<body>
+<script>
+if (is_top_frame) { $('body').addClass('wm-top-page'); }
+</script>
+
+
+
+<div class="container-fluid wm-page-content">
+  <a name="_top"></a>
+    
+
+    <h1 id="check-ros-updates">Check RoS updates</h1>
+<hr />
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>created to work together with <a href="../logEventTGInformer/">logEventTGInformer</a> script  </p>
+</div>
+<h2 id="logic">Logic</h2>
+<pre><code class="language-text">START
+|
+|─ 1. delay 60s (wait Internet)
+|─ 2. no scheduler? → create (24h interval)
+|─ 3. check-for-updates + delay 5s
+|─ 4. get installedVersion / latestVersion
+|─ 5. new version available?
+        |─ YES -&gt; log it &quot;New RouterOS version available&quot;
+        |         logEventTGInformer parses log and ntfy telgram
+        |─ NO -&gt; silent exit
+
+END
+</code></pre>
+<hr />
+<h2 id="how-to-use">How To Use</h2>
+<p>Add as script with name <code>checkRoSUpdate</code><br />
+- policy: read, write, test, policy<br />
+- do not require permission: no  </p>
+<hr />
+<h2 id="code">Code</h2>
+<pre><code class="language-bash"># =================================== 
+# checkRoSUpdate |  by xdenb43
+# created to work together with logEventTGInformer
+# tested on RoS 7.23
+# =================================== 
+
+# waiting for Internet is up after reboot
+# no matter if no Internet this time - next loop will start after 24h
+:delay 1m;
+
+# -----------------------------------
+# CONFIGURATION
+# -----------------------------------
+:local scriptName &quot;checkRoSUpdate&quot;;
+:local installedVersion;
+:local latestVersion;
+
+# -----------------------------------
+# SCHEDULER
+# -----------------------------------
+# warn if schedule does not exist and create it
+:if ([:len [/system scheduler find name=&quot;$scriptName&quot;]] = 0) do={
+    /log warning &quot;[$scriptName] Alert : Schedule does not exist. Creating schedule ....&quot;;
+    :delay 1s;
+    /system scheduler add name=$scriptName interval=24h start-time=startup on-event=$scriptName policy=read,write,test,policy;
+    /log warning &quot;[$scriptName] Alert : Schedule created!&quot;;
+}
+
+# -----------------------------------
+# MAIN PART
+# -----------------------------------
+/system/package/update/check-for-updates;
+:delay 5s;
+
+:set installedVersion [/system/package/update/get installed-version];
+:set latestVersion [/system/package/update/get latest-version];
+
+:if ([:len $latestVersion] &gt; 0 &amp;&amp; $latestVersion != $installedVersion) do={
+    /log info &quot;[$scriptName] new RouterOS version available: $latestVersion&quot;;
+}
+</code></pre>
+
+  <br>
+    
+
+    
+    
+      
+    
+
+  <div class="row wm-article-nav-buttons" role="navigation" aria-label="navigation">
+    
+    <div class="wm-article-nav pull-right">
+      <a href="../container_delayed_start/" class="btn btn-xs btn-default pull-right">
+        Next
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+      </a>
+      <a href="../container_delayed_start/" class="btn btn-xs btn-link">
+        Delayed containers start
+      </a>
+    </div>
+    
+    <div class="wm-article-nav">
+      <a href="../../firewall/fasttrack/" class="btn btn-xs btn-default pull-left">
+        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+        Previous</a><a href="../../firewall/fasttrack/" class="btn btn-xs btn-link">
+        FastTrack
+      </a>
+    </div>
+    
+  </div>
+
+    <br>
+</div>
+
+<footer class="container-fluid wm-page-content">
+      <p>
+        <a href="https://github.com/xdenb43/mikrotik-wizardbook/edit/master/docs/scripts/check_ros_update.md">Edit on xdenb43/mikrotik-wizardbook</a>
+      </p>
+  <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a> using <a href="https://github.com/gristlabs/mkdocs-windmill">Windmill</a> theme by Grist Labs.</p>
+</footer>
+
+</body>
+</html>

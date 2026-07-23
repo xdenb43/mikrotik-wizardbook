@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+  
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <meta name="author" content="xdenb43">
+    <link rel="canonical" href="https://xdenb43.github.io/mikrotik-wizardbook/dns/adlist/">
+    <link rel="shortcut icon" href="../../img/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <title>AdList - Ads blocker - MikroTik Field Guide | The Packet Drop</title>
+    <link href="../../css/bootstrap-3.3.7.min.css" rel="stylesheet">
+    <link href="../../css/font-awesome-4.7.0.css" rel="stylesheet">
+    <link href="../../css/base.css" rel="stylesheet">
+    <link rel="stylesheet" href="../../css/highlight.css">
+    <link href="../../css/custom.css" rel="stylesheet">
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
+
+    <script src="../../js/jquery-3.2.1.min.js"></script>
+    <script src="../../js/bootstrap-3.3.7.min.js"></script>
+    <script src="../../js/highlight.pack.js"></script>
+    
+    <base target="_top">
+    <script>
+      var base_url = '../..';
+      var is_top_frame = false;
+        
+        var pageToc = [
+          {title: "Best AdLists for Russia", url: "#_top", children: [
+              {title: "Recommended list:", url: "#recommended-list" },
+          ]},
+          {title: "Setup commands", url: "#setup-commands", children: [
+          ]},
+        ];
+
+    </script>
+    <script src="../../js/base.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    // Находим iframe, в котором тема Windmill отображает контент статьи
+    var iframe = document.getElementById('wm-article-frame') || document.querySelector('iframe');
+    
+    if (iframe) {
+      // Функция для обработки ссылок внутри iframe
+      function processIframeLinks() {
+        try {
+          var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+          // Ищем все внешние ссылки, которые начинаются с http/https
+          var links = iframeDoc.querySelectorAll('a[href^="http"]');
+          links.forEach(function(link) {
+            // Проверяем, что ссылка действительно внешняя (не ведет на наш локальный домен)
+            if (!link.href.includes(window.location.host)) {
+              link.setAttribute('target', '_blank');
+              link.setAttribute('rel', 'noopener noreferrer'); // Защита безопасности [1.12, 1.16, 1.17]
+            }
+          });
+        } catch (e) {
+          console.log("Iframe еще не доступен или заблокирован CORS:", e);
+        }
+      }
+
+      // Запускаем обработку при полной загрузке iframe
+      iframe.addEventListener('load', processIframeLinks);
+      // На всякий случай дублируем вызов (если iframe загрузился быстрее скрипта)
+      processIframeLinks();
+    }
+  });
+</script>
+
+</head>
+
+<body>
+<script>
+if (is_top_frame) { $('body').addClass('wm-top-page'); }
+</script>
+
+
+
+<div class="container-fluid wm-page-content">
+  <a name="_top"></a>
+    
+
+    <h1 id="adlist-ads-blocker">AdList ADS blocker</h1>
+<p>Good official doc: <a href="https://manual.mikrotik.com/docs/network-management/dns#adlist">https://manual.mikrotik.com/docs/network-management/dns#adlist</a>  </p>
+<hr />
+<div class="admonition danger">
+<p class="admonition-title">WARNING</p>
+<ul>
+<li>Before configuring, <u>increase the DNS cache</u> as it's used to store adlist entries. <br />
+  If limit is reached and error in DNS, error topic is printed <code>adlist read: max cache size reached</code>  </li>
+<li>Adlist is stored on device's internal memory. Ensure that there is <u>enough free space</u> to save the desired adlist.  </li>
+</ul>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">not recommended for</p>
+<p><a href="architecture.md/device-selection/">Low-end devices</a>  </p>
+</div>
+<hr />
+<h2 id="best-adlists-for-russia">Best AdLists for Russia</h2>
+<p>Schakal lists: <a href="https://4pda.to/forum/index.php?showtopic=275091&amp;st=7980#entry89665467">https://4pda.to/forum/index.php?showtopic=275091&amp;st=7980#entry89665467</a>  </p>
+<h3 id="recommended-list">Recommended list:</h3>
+<p>Original link: <a href="https://schakal.ru/hosts/alive_hosts.txt">https://schakal.ru/hosts/alive_hosts.txt</a>  <br />
+Secondary Link: <a href="https://schakal.hopto.org/alive_hosts.txt">https://schakal.hopto.org/alive_hosts.txt</a>  </p>
+<p>Some sites have to be whitelisted, info can be found <a href="https://4pda.to/forum/index.php?showtopic=275091&amp;st=9040#entry94846826">here</a>  </p>
+<hr />
+<h2 id="setup-commands">Setup commands</h2>
+<div class="admonition attention">
+<p class="admonition-title">Prerequisites</p>
+<ul>
+<li>MikroTik is configured as DNS resolver  </li>
+<li>Recommended cache size and DoH setup instruction can be found <a href="../doh/#queries-tuning-by-model">here</a>  </li>
+</ul>
+</div>
+<pre><code class="language-bash"># RoS 7.23
+# cache size and ttl as an example
+/ip dns
+set cache-max-ttl=12h cache-size=32768KiB
+
+# WhiteList
+/ip dns static
+add address-list=AdsWhitelist comment=&quot;Huawei Weather app&quot; name=hw.zuimeitianqi.com type=FWD
+
+# adList
+/ip dns adlist
+add ssl-verify=no url=https://schakal.hopto.org/alive_hosts.txt
+</code></pre>
+
+  <br>
+    
+
+    
+    
+      
+    
+
+  <div class="row wm-article-nav-buttons" role="navigation" aria-label="navigation">
+    
+    <div class="wm-article-nav pull-right">
+      <a href="../dnsproxy/" class="btn btn-xs btn-default pull-right">
+        Next
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+      </a>
+      <a href="../dnsproxy/" class="btn btn-xs btn-link">
+        AdGuard dnsproxy
+      </a>
+    </div>
+    
+    <div class="wm-article-nav">
+      <a href="../../architecture/device-selection/" class="btn btn-xs btn-default pull-left">
+        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+        Previous</a><a href="../../architecture/device-selection/" class="btn btn-xs btn-link">
+        Architecture guide
+      </a>
+    </div>
+    
+  </div>
+
+    <br>
+</div>
+
+<footer class="container-fluid wm-page-content">
+      <p>
+        <a href="https://github.com/xdenb43/mikrotik-wizardbook/edit/master/docs/dns/adlist.md">Edit on xdenb43/mikrotik-wizardbook</a>
+      </p>
+  <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a> using <a href="https://github.com/gristlabs/mkdocs-windmill">Windmill</a> theme by Grist Labs.</p>
+</footer>
+
+</body>
+</html>

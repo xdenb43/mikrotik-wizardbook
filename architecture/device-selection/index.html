@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+  
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <meta name="author" content="xdenb43">
+    <link rel="canonical" href="https://xdenb43.github.io/mikrotik-wizardbook/architecture/device-selection/">
+    <link rel="shortcut icon" href="../../img/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <title>Architecture guide - MikroTik Field Guide | The Packet Drop</title>
+    <link href="../../css/bootstrap-3.3.7.min.css" rel="stylesheet">
+    <link href="../../css/font-awesome-4.7.0.css" rel="stylesheet">
+    <link href="../../css/base.css" rel="stylesheet">
+    <link rel="stylesheet" href="../../css/highlight.css">
+    <link href="../../css/custom.css" rel="stylesheet">
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
+
+    <script src="../../js/jquery-3.2.1.min.js"></script>
+    <script src="../../js/bootstrap-3.3.7.min.js"></script>
+    <script src="../../js/highlight.pack.js"></script>
+    
+    <base target="_top">
+    <script>
+      var base_url = '../..';
+      var is_top_frame = false;
+        
+        var pageToc = [
+          {title: "Device classification model", url: "#_top", children: [
+          ]},
+          {title: "Feature suitability matrix", url: "#feature-suitability-matrix", children: [
+          ]},
+          {title: "Detailed classification", url: "#detailed-classification", children: [
+              {title: "Low-end Devices", url: "#low-end-devices" },
+              {title: "Mid-range Devices", url: "#mid-range-devices" },
+              {title: "High-end Devices", url: "#high-end-devices" },
+          ]},
+        ];
+
+    </script>
+    <script src="../../js/base.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    // Находим iframe, в котором тема Windmill отображает контент статьи
+    var iframe = document.getElementById('wm-article-frame') || document.querySelector('iframe');
+    
+    if (iframe) {
+      // Функция для обработки ссылок внутри iframe
+      function processIframeLinks() {
+        try {
+          var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+          // Ищем все внешние ссылки, которые начинаются с http/https
+          var links = iframeDoc.querySelectorAll('a[href^="http"]');
+          links.forEach(function(link) {
+            // Проверяем, что ссылка действительно внешняя (не ведет на наш локальный домен)
+            if (!link.href.includes(window.location.host)) {
+              link.setAttribute('target', '_blank');
+              link.setAttribute('rel', 'noopener noreferrer'); // Защита безопасности [1.12, 1.16, 1.17]
+            }
+          });
+        } catch (e) {
+          console.log("Iframe еще не доступен или заблокирован CORS:", e);
+        }
+      }
+
+      // Запускаем обработку при полной загрузке iframe
+      iframe.addEventListener('load', processIframeLinks);
+      // На всякий случай дублируем вызов (если iframe загрузился быстрее скрипта)
+      processIframeLinks();
+    }
+  });
+</script>
+
+</head>
+
+<body>
+<script>
+if (is_top_frame) { $('body').addClass('wm-top-page'); }
+</script>
+
+
+
+<div class="container-fluid wm-page-content">
+  <a name="_top"></a>
+    
+
+    <h1 id="architecture-guide">Architecture Guide</h1>
+<hr />
+<h2 id="device-classification-model">Device classification model</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">Tier</th>
+<th style="text-align: center;">Targe usage</th>
+<th style="text-align: left;">Usage scenarios</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">Low-end</td>
+<td style="text-align: center;">Home / Entry-level</td>
+<td style="text-align: left;">simplicity and home usage</td>
+</tr>
+<tr>
+<td style="text-align: center;">Mid-range</td>
+<td style="text-align: center;">SOHO / Extended home / Small Office</td>
+<td style="text-align: left;">balanced SOHO and professional setups</td>
+</tr>
+<tr>
+<td style="text-align: center;">High-end</td>
+<td style="text-align: center;">Enterprise / ISP-grade</td>
+<td style="text-align: left;">scalable enterprise and ISP environments</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p>This classification is based on real-world performance, not official vendor segmentation. </p>
+</div>
+<h2 id="feature-suitability-matrix">Feature suitability matrix</h2>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Low-end</th>
+<th>Mid-range</th>
+<th>High-end</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>NAT</td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Firewall (basic)</td>
+<td>⚠ limited</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>VLANs</td>
+<td>⚠ minimal</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>VPN</td>
+<td>⚠ limited</td>
+<td>✅</td>
+<td>🚀</td>
+</tr>
+<tr>
+<td>DoH</td>
+<td>⚠ CPU-heavy</td>
+<td>✅</td>
+<td>🚀</td>
+</tr>
+<tr>
+<td>BGP / advanced routing</td>
+<td>❌</td>
+<td>⚠ limited</td>
+<td>🚀</td>
+</tr>
+</tbody>
+</table>
+<h2 id="detailed-classification">Detailed classification</h2>
+<h3 id="low-end-devices">Low-end Devices</h3>
+<h4 id="typical-models">Typical models</h4>
+<ul>
+<li>MikroTik hAP lite  </li>
+<li>MikroTik hAP mini  </li>
+<li>MikroTik hEX lite  </li>
+<li>MikroTik RB941-2nD</li>
+<li><strong>MikroTik hAP ac lite TC</strong>  </li>
+</ul>
+<h4 id="characteristics">Characteristics</h4>
+<ul>
+<li>Low CPU performance (single-core or low-frequency multi-core)</li>
+<li>Limited RAM (32–64 MB)</li>
+<li>Basic routing and NAT capabilities</li>
+<li>Limited capacity for CPU-intensive features (e.g., DoH, complex firewall rules)</li>
+</ul>
+<h4 id="recommended-use-cases">Recommended use cases</h4>
+<ul>
+<li>Home internet gateway  </li>
+<li>Basic NAT and DHCP services  </li>
+<li>Simple firewall configurations  </li>
+<li>Testing and lab environments  </li>
+</ul>
+<h4 id="limitations">Limitations</h4>
+<ul>
+<li>DoH may introduce noticeable CPU load  </li>
+<li>Limited scalability for VLAN-heavy or VPN-heavy setups  </li>
+<li>Not suitable for advanced traffic processing  </li>
+</ul>
+<hr />
+<h3 id="mid-range-devices">Mid-range Devices</h3>
+<h4 id="typical-models_1">Typical models</h4>
+<ul>
+<li>MikroTik hAP ac²  </li>
+<li>MikroTik hAP ac³  </li>
+<li>MikroTik RB4011  </li>
+<li>MikroTik hEX S</li>
+<li>MikroTik hAP ac3 (SOHO router)</li>
+<li>MikroTik hAP ax2 (SOHO / Advanced Home / Edge Router)</li>
+<li><strong>MikroTik hAP ax³</strong> (upper-tier / advanced SOHO router)   </li>
+</ul>
+<h4 id="characteristics_1">Characteristics</h4>
+<ul>
+<li>Multi-core CPU with significantly higher throughput  </li>
+<li>128 MB to 1 GB RAM depending on model  </li>
+<li>Stable performance under combined workloads  </li>
+<li>Suitable for modern RouterOS features (v7+)  </li>
+</ul>
+<h4 id="recommended-use-cases_1">Recommended use cases</h4>
+<ul>
+<li>Small office / SOHO networks  </li>
+<li>VLAN segmentation and inter-VLAN routing  </li>
+<li>VPN services (WireGuard, IPsec, L2TP)  </li>
+<li>DoH with caching enabled  </li>
+<li>Moderate firewall complexity  </li>
+</ul>
+<div class="admonition caution">
+<p class="admonition-title">Caution</p>
+<ul>
+<li>Proper configuration is required to avoid CPU bottlenecks    </li>
+<li>Firewall rules should be optimized for performance</li>
+<li>DNS caching is strongly recommended when using DoH</li>
+</ul>
+</div>
+<hr />
+<h3 id="high-end-devices">High-end Devices</h3>
+<h4 id="typical-models_2">Typical models</h4>
+<ul>
+<li>MikroTik CCR1009  </li>
+<li>MikroTik CCR2004  </li>
+<li>MikroTik CCR2116  </li>
+<li>MikroTik CCR2216  </li>
+</ul>
+<h4 id="characteristics_2">Characteristics</h4>
+<ul>
+<li>High-core-count CPUs optimized for routing workloads  </li>
+<li>Hardware acceleration for throughput-intensive operations  </li>
+<li>Designed for multi-gigabit environments  </li>
+<li>High memory capacity for large routing tables and policies  </li>
+</ul>
+<h4 id="recommended-use-cases_2">Recommended use cases</h4>
+<ul>
+<li>Enterprise networks  </li>
+<li>ISP infrastructure  </li>
+<li>Large-scale routing (BGP, OSPF at scale)  </li>
+<li>Complex firewall and policy-based routing  </li>
+<li>High-throughput NAT environments  </li>
+</ul>
+<div class="admonition caution">
+<p class="admonition-title">Caution</p>
+<ul>
+<li>Best performance achieved with properly segmented architecture (VLANs, VRFs)  </li>
+<li>Recommended for environments with sustained high traffic loads  </li>
+</ul>
+</div>
+<hr />
+
+  <br>
+    
+
+    
+    
+      
+    
+
+  <div class="row wm-article-nav-buttons" role="navigation" aria-label="navigation">
+    
+    <div class="wm-article-nav pull-right">
+      <a href="../../dns/adlist/" class="btn btn-xs btn-default pull-right">
+        Next
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+      </a>
+      <a href="../../dns/adlist/" class="btn btn-xs btn-link">
+        AdList - Ads blocker
+      </a>
+    </div>
+    
+  </div>
+
+    <br>
+</div>
+
+<footer class="container-fluid wm-page-content">
+      <p>
+        <a href="https://github.com/xdenb43/mikrotik-wizardbook/edit/master/docs/architecture/device-selection.md">Edit on xdenb43/mikrotik-wizardbook</a>
+      </p>
+  <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a> using <a href="https://github.com/gristlabs/mkdocs-windmill">Windmill</a> theme by Grist Labs.</p>
+</footer>
+
+</body>
+</html>

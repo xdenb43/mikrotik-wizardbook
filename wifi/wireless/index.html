@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+  
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <meta name="author" content="xdenb43">
+    <link rel="canonical" href="https://xdenb43.github.io/mikrotik-wizardbook/wifi/wireless/">
+    <link rel="shortcut icon" href="../../img/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <title>Wireless package - MikroTik Field Guide | The Packet Drop</title>
+    <link href="../../css/bootstrap-3.3.7.min.css" rel="stylesheet">
+    <link href="../../css/font-awesome-4.7.0.css" rel="stylesheet">
+    <link href="../../css/base.css" rel="stylesheet">
+    <link rel="stylesheet" href="../../css/highlight.css">
+    <link href="../../css/custom.css" rel="stylesheet">
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
+
+    <script src="../../js/jquery-3.2.1.min.js"></script>
+    <script src="../../js/bootstrap-3.3.7.min.js"></script>
+    <script src="../../js/highlight.pack.js"></script>
+    
+    <base target="_top">
+    <script>
+      var base_url = '../..';
+      var is_top_frame = false;
+        
+        var pageToc = [
+          {title: "Recommended values", url: "#_top", children: [
+          ]},
+          {title: "Best config by device class", url: "#best-config-by-device-class", children: [
+              {title: "Low-End Devices (hAP lite, hAP ac lite, RB750)", url: "#low-end-devices-hap-lite-hap-ac-lite-rb750" },
+          ]},
+        ];
+
+    </script>
+    <script src="../../js/base.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    // Находим iframe, в котором тема Windmill отображает контент статьи
+    var iframe = document.getElementById('wm-article-frame') || document.querySelector('iframe');
+    
+    if (iframe) {
+      // Функция для обработки ссылок внутри iframe
+      function processIframeLinks() {
+        try {
+          var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+          // Ищем все внешние ссылки, которые начинаются с http/https
+          var links = iframeDoc.querySelectorAll('a[href^="http"]');
+          links.forEach(function(link) {
+            // Проверяем, что ссылка действительно внешняя (не ведет на наш локальный домен)
+            if (!link.href.includes(window.location.host)) {
+              link.setAttribute('target', '_blank');
+              link.setAttribute('rel', 'noopener noreferrer'); // Защита безопасности [1.12, 1.16, 1.17]
+            }
+          });
+        } catch (e) {
+          console.log("Iframe еще не доступен или заблокирован CORS:", e);
+        }
+      }
+
+      // Запускаем обработку при полной загрузке iframe
+      iframe.addEventListener('load', processIframeLinks);
+      // На всякий случай дублируем вызов (если iframe загрузился быстрее скрипта)
+      processIframeLinks();
+    }
+  });
+</script>
+
+</head>
+
+<body>
+<script>
+if (is_top_frame) { $('body').addClass('wm-top-page'); }
+</script>
+
+
+
+<div class="container-fluid wm-page-content">
+  <a name="_top"></a>
+    
+
+    <h1 id="wireless-package">Wireless package</h1>
+<p>Good official doc: <a href="https://manual.mikrotik.com/docs/wireless/wireless-interface">https://manual.mikrotik.com/docs/wireless/wireless-interface</a>  </p>
+<hr />
+<h2 id="recommended-values">Recommended values</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">parameter</th>
+<th style="text-align: center;">2ghz value</th>
+<th style="text-align: center;">5ghz value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"><code>adaptive-noise-immunity</code></td>
+<td style="text-align: center;"><code>ap&amp;client</code> because of noisy 2ghz env</td>
+<td style="text-align: center;"><code>none</code></td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>hw-protection-mode</code></td>
+<td style="text-align: center;"><code>cts-to-self</code>: old devices and mixed b/g/n<br><code>rts-cts</code>: collisions and Tx/Rx CCQ &lt; 60%</td>
+<td style="text-align: center;"><code>none</code></td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>frequency</code></td>
+<td style="text-align: center;"><code>2412</code>: ch. 1<br><code>2437</code>: ch. 6<br><code>2462</code>: ch. 11</td>
+<td style="text-align: center;"><code>5200</code>: ch. 40<br> if noisy ch. 52 or 100</td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>distance</code></td>
+<td style="text-align: center;"><code>dynamic</code>: everywhere<br><code>fixed</code>: outside p2p only</td>
+<td style="text-align: center;">the same</td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>country</code></td>
+<td style="text-align: center;"><code>russia3</code>: the best<br> <code>russia4</code>: max power<br><code>russia</code> max limits<br><code>russia1/2</code>: specific</td>
+<td style="text-align: center;">the same</td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>installation</code></td>
+<td style="text-align: center;"><code>indoor</code>: home usage<br> <code>outdoor</code>: limits for DFS</td>
+<td style="text-align: center;">the same</td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>multicast-helper</code></td>
+<td style="text-align: center;"><code>disabled</code>: default<br><code>full</code>: for home wifi</td>
+<td style="text-align: center;">the same</td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>preamble-mode</code></td>
+<td style="text-align: center;"><code>both</code>: universal<br><code>short</code>: only modern devices<br><code>long</code>: old devices and b mode</td>
+<td style="text-align: center;">the same</td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>wmm-support</code></td>
+<td style="text-align: center;"><code>enabled</code>: the best<br><code>disabled</code>: not use, 54 Mb/s limit<br><code>required</code>: drop unsupported clients</td>
+<td style="text-align: center;">the same</td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>skip-dfs-channels</code></td>
+<td style="text-align: center;">not applicable</td>
+<td style="text-align: center;"><code>all</code>: best for home usage<br><code>disabled</code>: fixed ch. 52 or 100<br><code>10min-only</code>: skip ch. 120–128<br>--&gt;(weather radars)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="best-config-by-device-class">Best config by device class</h2>
+<h3 id="low-end-devices-hap-lite-hap-ac-lite-rb750">Low-End Devices (hAP lite, hAP ac lite, RB750)</h3>
+<pre><code class="language-bash"># RoS 7.23
+# replace $MYSSID and $MYKEY
+/interface wireless security-profiles
+set [ find default=yes ] authentication-types=wpa2-psk disable-pmkid=no group-ciphers=aes-ccm \
+    group-key-update=1h management-protection=disabled mode=dynamic-keys name=default \
+    unicast-ciphers=aes-ccm wpa-pre-shared-key=&quot;&quot; wpa2-pre-shared-key=&quot;$MYKEY&quot;
+
+# 2ghz
+/interface wireless
+set [ find default-name=wlan1 ] adaptive-noise-immunity=ap-and-client-mode band=2ghz-g/n \
+    channel-width=20mhz country=russia3 distance=dynamic frequency=2412 \
+    frequency-mode=regulatory-domain hw-protection-mode=none installation=indoor \
+    mode=ap-bridge multicast-helper=default name=wifi-2ghz preamble-mode=both \
+    security-profile=default skip-dfs-channels=disabled ssid=$MYSSID wmm-support=enabled \
+    wps-mode=disabled
+
+# 5ghz
+/interface wireless
+set [ find default-name=wlan2 ] adaptive-noise-immunity=none band=5ghz-n/ac \
+    channel-width=20/40mhz-XX country=russia3 distance=dynamic frequency=5200 \
+    frequency-mode=regulatory-domain hw-protection-mode=none installation=indoor \
+    mode=ap-bridge multicast-helper=default name=wifi-5ghz preamble-mode=both \
+    security-profile=default skip-dfs-channels=all ssid=$MYSSID wmm-support=enabled \
+    wps-mode=disabled
+</code></pre>
+
+  <br>
+    
+
+    
+    
+      
+    
+
+  <div class="row wm-article-nav-buttons" role="navigation" aria-label="navigation">
+    
+    <div class="wm-article-nav">
+      <a href="../../vpn/l2tp_ipsec_client/" class="btn btn-xs btn-default pull-left">
+        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+        Previous</a><a href="../../vpn/l2tp_ipsec_client/" class="btn btn-xs btn-link">
+        L2TP/IPsec client
+      </a>
+    </div>
+    
+  </div>
+
+    <br>
+</div>
+
+<footer class="container-fluid wm-page-content">
+      <p>
+        <a href="https://github.com/xdenb43/mikrotik-wizardbook/edit/master/docs/wifi/wireless.md">Edit on xdenb43/mikrotik-wizardbook</a>
+      </p>
+  <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a> using <a href="https://github.com/gristlabs/mkdocs-windmill">Windmill</a> theme by Grist Labs.</p>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+  
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <meta name="author" content="xdenb43">
+    <link rel="canonical" href="https://xdenb43.github.io/mikrotik-wizardbook/dns/dnsproxy/">
+    <link rel="shortcut icon" href="../../img/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <title>AdGuard dnsproxy - MikroTik Field Guide | The Packet Drop</title>
+    <link href="../../css/bootstrap-3.3.7.min.css" rel="stylesheet">
+    <link href="../../css/font-awesome-4.7.0.css" rel="stylesheet">
+    <link href="../../css/base.css" rel="stylesheet">
+    <link rel="stylesheet" href="../../css/highlight.css">
+    <link href="../../css/custom.css" rel="stylesheet">
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
+
+    <script src="../../js/jquery-3.2.1.min.js"></script>
+    <script src="../../js/bootstrap-3.3.7.min.js"></script>
+    <script src="../../js/highlight.pack.js"></script>
+    
+    <base target="_top">
+    <script>
+      var base_url = '../..';
+      var is_top_frame = false;
+        
+        var pageToc = [
+          {title: "How To Setup", url: "#_top", children: [
+          ]},
+          {title: "Parameters for MikroTik as DNS relay", url: "#parameters-for-mikrotik-as-dns-relay", children: [
+          ]},
+          {title: "Setup commands", url: "#setup-commands", children: [
+          ]},
+          {title: "Additional: dnsproxy as direct LAN DNS resolver", url: "#additional-dnsproxy-as-direct-lan-dns-resolver", children: [
+          ]},
+        ];
+
+    </script>
+    <script src="../../js/base.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    // Находим iframe, в котором тема Windmill отображает контент статьи
+    var iframe = document.getElementById('wm-article-frame') || document.querySelector('iframe');
+    
+    if (iframe) {
+      // Функция для обработки ссылок внутри iframe
+      function processIframeLinks() {
+        try {
+          var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+          // Ищем все внешние ссылки, которые начинаются с http/https
+          var links = iframeDoc.querySelectorAll('a[href^="http"]');
+          links.forEach(function(link) {
+            // Проверяем, что ссылка действительно внешняя (не ведет на наш локальный домен)
+            if (!link.href.includes(window.location.host)) {
+              link.setAttribute('target', '_blank');
+              link.setAttribute('rel', 'noopener noreferrer'); // Защита безопасности [1.12, 1.16, 1.17]
+            }
+          });
+        } catch (e) {
+          console.log("Iframe еще не доступен или заблокирован CORS:", e);
+        }
+      }
+
+      // Запускаем обработку при полной загрузке iframe
+      iframe.addEventListener('load', processIframeLinks);
+      // На всякий случай дублируем вызов (если iframe загрузился быстрее скрипта)
+      processIframeLinks();
+    }
+  });
+</script>
+
+</head>
+
+<body>
+<script>
+if (is_top_frame) { $('body').addClass('wm-top-page'); }
+</script>
+
+
+
+<div class="container-fluid wm-page-content">
+  <a name="_top"></a>
+    
+
+    <h1 id="adguard-dnsproxy">AdGuard dnsproxy</h1>
+<p>Official doc: <a href="https://github.com/AdguardTeam/dnsproxy/blob/master/README.md">https://github.com/AdguardTeam/dnsproxy/blob/master/README.md</a> </p>
+<hr />
+<div class="admonition note">
+<p>Can be used via <strong>container</strong> only  </p>
+</div>
+<h2 id="how-to-setup">How To Setup</h2>
+<p>Instruction: <a href="https://hub.docker.com/r/wiktorbgu/dnsproxy-mikrotik">dnsproxy container</a> by <a href="https://hub.docker.com/u/wiktorbgu">@wiktobgu</a></p>
+<h2 id="parameters-for-mikrotik-as-dns-relay">Parameters for MikroTik as DNS relay</h2>
+<ul>
+<li><code>upstream</code>: upstream DNS resolver(s) </li>
+<li><code>fallback</code>: failover "last resort” DNS resolver(s)   </li>
+<li><code>cache</code> not required, mikrotik's native cache used  </li>
+</ul>
+<p>Explanation for DoH providers selection is available <a href="../doh/#doh-provider-selection-considerations-for-russia">here</a> </p>
+<pre><code class="language-bash">--listen=0.0.0.0 \
+--port=53 \
+--dnssec \
+--pending-requests-enabled \
+--timeout=5s \
+--http3 \
+--upstream=https://dns.google/dns-query \
+--upstream=https://cloudflare-dns.com/dns-query \
+--fallback=https://common.dot.dns.yandex.net/dns-query
+</code></pre>
+<hr />
+<h2 id="setup-commands">Setup commands</h2>
+<div class="admonition attention">
+<p>USB drive used for containers storage<br />
+Optimization for other DNS parameters well-described <a href="../doh/#doh-and-dns-tuning">here</a></p>
+</div>
+<pre><code class="language-bash"># RoS 7.23
+# VETH IP 192.168.254.11
+# Bridge-Docker network 192.168.254.0/24 
+# Bridge-Docker NOT added to LAN interface list
+# NO masquarading required
+
+/interface/bridge add name=Bridge-Docker port-cost-mode=short
+/ip/address add address=192.168.254.1/24 interface=Bridge-Docker network=192.168.254.0
+/interface/veth add address=192.168.254.11/24 gateway=192.168.254.1 name=DNSPROXY
+/interface/bridge/port add bridge=Bridge-Docker interface=DNSPROXY
+
+/container config registry-url=https://dockerhub.timeweb.cloud
+
+/container
+add cmd=&quot;--listen=0.0.0.0 --port=53 \
+    --dnssec --pending-requests-enabled --timeout=5s --http3 \
+    --upstream=https://dns.google/dns-query \
+    --upstream=https://cloudflare-dns.com/dns-query \
+    --fallback=https://common.dot.dns.yandex.net/dns-query&quot; \
+    dns=8.8.8.8,8.8.4.4,1.1.1.1,1.0.0.1,77.88.8.8,77.88.8.1 \
+    interface=DNSPROXY \
+    layer-dir=&quot;&quot; \
+    memory-high=32.0MiB memory-max=64.0MiB \
+    name=dnsproxy-mikrotik remote-image=wiktorbgu/dnsproxy-mikrotik \
+    restart-interval=1m restart-max-count=5 restart-policy=on-failure \
+    root-dir=/usb1/docker/dnsproxy-mikrotik start-on-boot=yes \
+    workdir=/
+
+/ip dns set allow-remote-requests=yes use-doh-server=&quot;&quot; servers=192.168.254.11
+</code></pre>
+<hr />
+<h2 id="additional-dnsproxy-as-direct-lan-dns-resolver">Additional: dnsproxy as direct LAN DNS resolver</h2>
+<div class="admonition info">
+<p>case for dnsproxy is announced via DHCP server  </p>
+</div>
+<pre><code class="language-bash">/ip/dhcp-server/network/set dns-server=192.168.254.11
+/ip dns set allow-remote-requests=yes
+</code></pre>
+<p>Recommended values</p>
+<pre><code class="language-bash">--listen=0.0.0.0 \
+--port=53 \
+--cache \
+--cache-size=33554432 \
+--cache-max-ttl=43200 \
+--cache-optimistic \
+--optimistic-max-age=12h \
+--optimistic-answer-ttl=30s \
+--dnssec \
+--http3 \
+--pending-requests-enabled \
+--timeout=5s \
+--http3 \
+--upstream=https://dns.google/dns-query \
+--upstream=https://cloudflare-dns.com/dns-query \
+--fallback=https://common.dot.dns.yandex.net/dns-query
+</code></pre>
+
+  <br>
+    
+
+    
+    
+      
+    
+
+  <div class="row wm-article-nav-buttons" role="navigation" aria-label="navigation">
+    
+    <div class="wm-article-nav pull-right">
+      <a href="../doh/" class="btn btn-xs btn-default pull-right">
+        Next
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+      </a>
+      <a href="../doh/" class="btn btn-xs btn-link">
+        DNS over HTTPs (DoH)
+      </a>
+    </div>
+    
+    <div class="wm-article-nav">
+      <a href="../adlist/" class="btn btn-xs btn-default pull-left">
+        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+        Previous</a><a href="../adlist/" class="btn btn-xs btn-link">
+        AdList - Ads blocker
+      </a>
+    </div>
+    
+  </div>
+
+    <br>
+</div>
+
+<footer class="container-fluid wm-page-content">
+      <p>
+        <a href="https://github.com/xdenb43/mikrotik-wizardbook/edit/master/docs/dns/dnsproxy.md">Edit on xdenb43/mikrotik-wizardbook</a>
+      </p>
+  <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a> using <a href="https://github.com/gristlabs/mkdocs-windmill">Windmill</a> theme by Grist Labs.</p>
+</footer>
+
+</body>
+</html>

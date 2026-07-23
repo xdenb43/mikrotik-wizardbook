@@ -1,0 +1,132 @@
+/* ==========================================================================
+   STYLISH FLAT ADMONITIONS (АННОТАЦИИ И ЗАМЕТКИ)
+   ========================================================================== */
+
+/* 1. Общий контейнер для всех типов аннотаций */
+.admonition {
+    margin: 24px 0;
+    padding: 16px 20px;
+    border-left: 4px solid #cbd5e1;       /* Плотная акцентная полоса слева */
+    border-radius: 0 8px 8px 0;           /* Закругляем углы только справа */
+    background-color: #f8fafc;            /* Очень мягкий общий фон */
+    box-shadow: none;
+}
+
+/* Настройка заголовка аннотации */
+.admonition-title {
+    font-weight: 700;
+    font-size: 14px;
+    margin-top: 0;
+    margin-bottom: 8px;
+    text-transform: uppercase;            /* Заголовки строгими заглавными буквами */
+    letter-spacing: 0.5px;
+}
+
+/* Настройка текста внутри тела аннотации */
+.admonition p {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #334155;
+}
+.admonition p:last-child {
+    margin-bottom: 0;                     /* Убираем лишний отступ у последней строки */
+}
+
+/* 2. КАСТОМИЗАЦИЯ ПО ТИПАМ ЗАМЕТОК */
+
+/* Тип: Справочная информация / Инфо (!!! note) */
+.admonition.note {
+    border-left-color: #3b82f6;          /* Синий акцент */
+    background-color: #eff6ff;           /* Нежно-синий фон */
+}
+.admonition.note .admonition-title {
+    color: #1d4ed8;
+}
+
+/* Тип: Готовое решение / Совет / Успех (!!! success) */
+.admonition.success {
+    border-left-color: #10b981;          /* Зеленый акцент */
+    background-color: #ecfdf5;           /* Нежно-зеленый фон */
+}
+.admonition.success .admonition-title {
+    color: #047857;
+}
+
+/* Тип: Важно / Опасность / Критично (!!! danger) */
+.admonition.danger {
+    border-left-color: #ef4444;          /* Красный акцент */
+    background-color: #fef2f2;           /* Нежно-красный фон */
+}
+.admonition.danger .admonition-title {
+    color: #b91c1c;
+}
+
+
+/* ==========================================================================
+   СОВРЕМЕННЫЙ СТИЛЬ ТАБЛИЦ ДЛЯ MIKROTIK WIZARDBOOK
+   ========================================================================== */
+
+/* 1. Настройка основного контейнера таблицы */
+.wm-article table {
+    width: 100%;
+    margin: 24px 0;
+    border-collapse: collapse;
+    font-size: 14px;
+    line-height: 1.5;
+    background-color: #ffffff;
+}
+
+/* 2. Стиль шапки таблицы (Делаем её строгой, темно-синей) */
+.wm-article table th {
+    background-color: #2c3e50; /* Красивый темный графитовый цвет */
+    color: #ffffff !important;  /* Белый текст */
+    font-weight: 600;
+    padding: 12px 16px;
+    text-align: left;
+    border: 1px solid #2c3e50;
+}
+
+/* 3. Стиль обычных ячеек с данными */
+.wm-article table td {
+    padding: 12px 16px;
+    border: 1px solid #e2e8f0; /* Легкие серые границы */
+    color: #333333;
+    vertical-align: top;       /* Выравнивание текста по верхнему краю */
+}
+
+/* 4. Чередование строк (Эффект зебры для удобства чтения) */
+.wm-article table tr:nth-child(even) {
+    background-color: #f8fafc; /* Каждая вторая строка будет слегка сероватой */
+}
+
+/* 5. Подсветка строки при наведении мыши (помогает не терять строку взглядом) */
+.wm-article table tr:hover {
+    background-color: #f1f5f9; 
+}
+
+/* 6. Автоматическое выделение первого столбца (где обычно пишется параметр команды) */
+.wm-article table td:first-child {
+    font-weight: 600;          /* Полужирный шрифт */
+    color: #1e293b;            /* Более глубокий цвет текста */
+}
+
+/* 7. Включаем автоматическую адаптивность для мобильных экранов */
+.wm-article {
+    overflow-x: auto;
+}
+.wm-article table {
+    min-width: 600px; /* Таблица не будет сжиматься в кашу на телефонах */
+}
+
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    var links = document.querySelectorAll('.wm-article a[href^="http"]');
+    links.forEach(function(link) {
+      if (!link.href.includes(window.location.host)) {
+        link.setAttribute('target', '_blank');
+        link.setAttribute('rel', 'noopener noreferrer'); // Защита безопасности
+      }
+    });
+  });
+</script>

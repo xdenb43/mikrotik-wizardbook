@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+  
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <meta name="author" content="xdenb43">
+    <link rel="canonical" href="https://xdenb43.github.io/mikrotik-wizardbook/vpn/l2tp_ipsec_client/">
+    <link rel="shortcut icon" href="../../img/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <title>L2TP/IPsec client - MikroTik Field Guide | The Packet Drop</title>
+    <link href="../../css/bootstrap-3.3.7.min.css" rel="stylesheet">
+    <link href="../../css/font-awesome-4.7.0.css" rel="stylesheet">
+    <link href="../../css/base.css" rel="stylesheet">
+    <link rel="stylesheet" href="../../css/highlight.css">
+    <link href="../../css/custom.css" rel="stylesheet">
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
+
+    <script src="../../js/jquery-3.2.1.min.js"></script>
+    <script src="../../js/bootstrap-3.3.7.min.js"></script>
+    <script src="../../js/highlight.pack.js"></script>
+    
+    <base target="_top">
+    <script>
+      var base_url = '../..';
+      var is_top_frame = false;
+        
+        var pageToc = [
+          {title: "Get connection data", url: "#_top", children: [
+          ]},
+          {title: "Setup commands", url: "#setup-commands", children: [
+          ]},
+        ];
+
+    </script>
+    <script src="../../js/base.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    // Находим iframe, в котором тема Windmill отображает контент статьи
+    var iframe = document.getElementById('wm-article-frame') || document.querySelector('iframe');
+    
+    if (iframe) {
+      // Функция для обработки ссылок внутри iframe
+      function processIframeLinks() {
+        try {
+          var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+          // Ищем все внешние ссылки, которые начинаются с http/https
+          var links = iframeDoc.querySelectorAll('a[href^="http"]');
+          links.forEach(function(link) {
+            // Проверяем, что ссылка действительно внешняя (не ведет на наш локальный домен)
+            if (!link.href.includes(window.location.host)) {
+              link.setAttribute('target', '_blank');
+              link.setAttribute('rel', 'noopener noreferrer'); // Защита безопасности [1.12, 1.16, 1.17]
+            }
+          });
+        } catch (e) {
+          console.log("Iframe еще не доступен или заблокирован CORS:", e);
+        }
+      }
+
+      // Запускаем обработку при полной загрузке iframe
+      iframe.addEventListener('load', processIframeLinks);
+      // На всякий случай дублируем вызов (если iframe загрузился быстрее скрипта)
+      processIframeLinks();
+    }
+  });
+</script>
+
+</head>
+
+<body>
+<script>
+if (is_top_frame) { $('body').addClass('wm-top-page'); }
+</script>
+
+
+
+<div class="container-fluid wm-page-content">
+  <a name="_top"></a>
+    
+
+    <h1 id="l2tpipsec-client">L2TP/IPsec Client</h1>
+<p>Good official doc: <a href="https://manual.mikrotik.com/docs/virtual-private-networks/">https://manual.mikrotik.com/docs/virtual-private-networks/</a>  </p>
+<hr />
+<h2 id="get-connection-data">Get connection data</h2>
+<p>Example:</p>
+<pre><code class="language-text">L2TP over IPsec (IKEv1)
+
+IPsec (IKE SA / Phase 1) - profile
+    IKE version: IKEv1
+    Authentication: Pre-Shared Key ($PSK)
+    Encryption: AES-128-CBC
+    Integrity: HMAC-SHA1-96
+    PRF: HMAC-SHA1
+    DH Group: MODP 1024
+    DPD: enabled (30s)
+    NAT-T: enabled (UDP 4500)
+
+IPsec CHILD SA (Phase 2) - proposal
+    Protocol: ESP in UDP encapsulation (L2TP/IPsec transport mode)
+    Encryption: AES-128-CBC
+    Integrity: HMAC-SHA1-96
+    PFS: OFF
+    Mode: TRANSPORT (not tunnel)  
+
+L2TP over IPsec
+    L2TP version: v2
+    Port: UDP 1701 (tunneled inside IPsec)
+PPP authentication (after IPsec)
+    Username: $USERNAME
+    Password: $PASSWORD
+    Auth methods allowed:
+        - MSCHAPv2 (preferred)
+
+IP assignment
+    Local IP: $LOCAL_IP
+    Remote VPN server: $REMOTE_IP
+    IPCP: address + DNS routes enabled
+    Default route: user-choice
+</code></pre>
+<hr />
+<h2 id="setup-commands">Setup commands</h2>
+<pre><code class="language-bash"># IPsec phase 1
+/ip ipsec profile
+set [ find default=yes ] dh-group=modp1024 dpd-interval=30s dpd-maximum-failures=5 \
+    enc-algorithm=aes-128 hash-algorithm=sha1 lifetime=1d name=default \
+    nat-traversal=yes ppk=no proposal-check=obey
+
+# IPsec phase 2
+/ip ipsec proposal
+set [ find default=yes ] auth-algorithms=sha1 disabled=no enc-algorithms=aes-128-cbc \
+    lifetime=30m name=default pfs-group=none
+
+# L2TP itself
+/interface l2tp-client
+add add-default-route=no allow=mschap2 allow-fast-path=no connect-to=$REMOTE_IP \
+    dial-on-demand=no disabled=no ipsec-secret=$PSK keepalive-timeout=60 \
+    l2tp-proto-version=l2tpv2 l2tpv3-digest-hash=md5 max-mru=1380 max-mtu=1380 \
+    mrru=disabled name=$CONNECTION_NAME password=$PASSWORD \
+    profile=default random-source-port=no use-ipsec=yes use-peer-dns=no user=$USERNAME
+
+/interface list
+add name=&quot;L2TP OUT&quot;
+/interface list member
+add interface=$CONNECTION_NAME list=&quot;L2TP OUT&quot;  
+
+# Masquerade
+add action=masquerade chain=srcnat comment=&quot;Masquerade L2TP &quot; \
+    out-interface-list=&quot;L2TP OUT&quot;
+
+/interface l2tp-client disable $CONNECTION_NAME
+/interface l2tp-client enable $CONNECTION_NAME
+</code></pre>
+
+  <br>
+    
+
+    
+    
+      
+    
+
+  <div class="row wm-article-nav-buttons" role="navigation" aria-label="navigation">
+    
+    <div class="wm-article-nav pull-right">
+      <a href="../../wifi/wireless/" class="btn btn-xs btn-default pull-right">
+        Next
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+      </a>
+      <a href="../../wifi/wireless/" class="btn btn-xs btn-link">
+        Wireless package
+      </a>
+    </div>
+    
+    <div class="wm-article-nav">
+      <a href="../../utilities/ntp/" class="btn btn-xs btn-default pull-left">
+        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+        Previous</a><a href="../../utilities/ntp/" class="btn btn-xs btn-link">
+        NTP
+      </a>
+    </div>
+    
+  </div>
+
+    <br>
+</div>
+
+<footer class="container-fluid wm-page-content">
+      <p>
+        <a href="https://github.com/xdenb43/mikrotik-wizardbook/edit/master/docs/vpn/l2tp_ipsec_client.md">Edit on xdenb43/mikrotik-wizardbook</a>
+      </p>
+  <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a> using <a href="https://github.com/gristlabs/mkdocs-windmill">Windmill</a> theme by Grist Labs.</p>
+</footer>
+
+</body>
+</html>

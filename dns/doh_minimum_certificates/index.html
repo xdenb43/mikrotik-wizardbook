@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+  
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <meta name="author" content="xdenb43">
+    <link rel="canonical" href="https://xdenb43.github.io/mikrotik-wizardbook/dns/doh_minimum_certificates/">
+    <link rel="shortcut icon" href="../../img/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <title>DoH certificates - MikroTik Field Guide | The Packet Drop</title>
+    <link href="../../css/bootstrap-3.3.7.min.css" rel="stylesheet">
+    <link href="../../css/font-awesome-4.7.0.css" rel="stylesheet">
+    <link href="../../css/base.css" rel="stylesheet">
+    <link rel="stylesheet" href="../../css/highlight.css">
+    <link href="../../css/custom.css" rel="stylesheet">
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
+
+    <script src="../../js/jquery-3.2.1.min.js"></script>
+    <script src="../../js/bootstrap-3.3.7.min.js"></script>
+    <script src="../../js/highlight.pack.js"></script>
+    
+    <base target="_top">
+    <script>
+      var base_url = '../..';
+      var is_top_frame = false;
+        
+        var pageToc = [
+          {title: "DoH providers", url: "#_top", children: [
+              {title: "CloudFlare", url: "#cloudflare" },
+              {title: "Quad9", url: "#quad9" },
+              {title: "Google", url: "#google" },
+              {title: "Comss", url: "#comss" },
+          ]},
+          {title: "Additional", url: "#additional", children: [
+              {title: "Big CA list with all certificates ~ 2Mb", url: "#big-ca-list-with-all-certificates-2mb" },
+          ]},
+        ];
+
+    </script>
+    <script src="../../js/base.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    // Находим iframe, в котором тема Windmill отображает контент статьи
+    var iframe = document.getElementById('wm-article-frame') || document.querySelector('iframe');
+    
+    if (iframe) {
+      // Функция для обработки ссылок внутри iframe
+      function processIframeLinks() {
+        try {
+          var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+          // Ищем все внешние ссылки, которые начинаются с http/https
+          var links = iframeDoc.querySelectorAll('a[href^="http"]');
+          links.forEach(function(link) {
+            // Проверяем, что ссылка действительно внешняя (не ведет на наш локальный домен)
+            if (!link.href.includes(window.location.host)) {
+              link.setAttribute('target', '_blank');
+              link.setAttribute('rel', 'noopener noreferrer'); // Защита безопасности [1.12, 1.16, 1.17]
+            }
+          });
+        } catch (e) {
+          console.log("Iframe еще не доступен или заблокирован CORS:", e);
+        }
+      }
+
+      // Запускаем обработку при полной загрузке iframe
+      iframe.addEventListener('load', processIframeLinks);
+      // На всякий случай дублируем вызов (если iframe загрузился быстрее скрипта)
+      processIframeLinks();
+    }
+  });
+</script>
+
+</head>
+
+<body>
+<script>
+if (is_top_frame) { $('body').addClass('wm-top-page'); }
+</script>
+
+
+
+<div class="container-fluid wm-page-content">
+  <a name="_top"></a>
+    
+
+    <h1 id="doh-resolvers-minimum-certificates">DoH resolvers<br> minimum certificates</h1>
+<hr />
+<div class="admonition danger">
+<p class="admonition-title">attention</p>
+<ul>
+<li>RoS 7.23+ prefer to use built-in root CA list instead of adding CA manually! <br />
+<code>/certificate/settings/set builtin-trust-store=all</code>  </li>
+<li><strong>Exception</strong>: manually add SSL CA for CloudFlare</li>
+<li><strong>for insurance</strong>: manually add CA for Comss</li>
+</ul>
+</div>
+<hr />
+<h2 id="doh-providers">DoH providers</h2>
+<p>The best DoH provider choice described <a href="../doh/#doh-provider-selection-considerations-for-russia">here</a></p>
+<h3 id="cloudflare">CloudFlare</h3>
+<ul>
+<li>default DoH link <a href="https://cloudflare-dns.com/dns-query">https://cloudflare-dns.com/dns-query</a>  </li>
+<li>secure DoH link <a href="https://secure.cloudflare-dns.com/dns-query">https://secure.cloudflare-dns.com/dns-query</a></li>
+</ul>
+<div class="admonition note">
+<p>MikroTik build-in root CA: <strong>NOK</strong>, need to add SSL cert<br />
+Appears by error <code>DoH server connection error: SSL: ssl: no trusted CA certificate found</code></p>
+</div>
+<h4 id="setup-commands">Setup commands</h4>
+<pre><code class="language-bash"># RoS 7.23
+# SSL root CA
+/tool fetch url=&quot;https://ssl.com/repo/certs/SSLcomRootCertificationAuthorityECC.pem&quot;
+/certificate import file-name=SSLcomRootCertificationAuthorityECC.pem
+
+/ip dns set allow-remote-requests=yes \
+    servers=1.1.1.1,77.88.8.8,8.8.8.8 \
+    use-doh-server=https://cloudflare-dns.com/dns-query verify-doh-cert=yes
+
+/ip dns cache flush
+</code></pre>
+<hr />
+<h3 id="quad9">Quad9</h3>
+<div class="admonition caution">
+<p class="admonition-title">limited support</p>
+<ul>
+<li>Limited support backed  <br />
+  since RoS 7.23: <code>dns - added HTTP/2 support to DoH on ARM64 and x86/CHR devices</code>  </li>
+<li>Totally not supported <br />
+  since December 15 2025: <a href="https://quad9.net/news/blog/doh-http-1-1-retirement/">DOH HTTP/1.1 Retirement</a>    </li>
+</ul>
+</div>
+<div class="admonition note">
+<p>MikroTik build-in root CA: <strong>OK</strong>  </p>
+</div>
+<h4 id="setup-commands_1">Setup commands</h4>
+<pre><code class="language-bash"># RoS 7.23
+# optional
+# /tool fetch mode=https url=&quot;https://cacerts.digicert.com/DigiCertGlobalG3TLSECCSHA3842020CA1-1.crt.pem&quot;
+# /certificate import file-name=DigiCertGlobalG3TLSECCSHA3842020CA1-1.crt.pem
+
+/ip dns static
+add address=9.9.9.9 comment=&quot;DNS Quad9&quot; name=dns.quad9.net type=A
+add address=149.112.112.112 comment=&quot;DNS Quad9&quot; name=dns.quad9.net type=A
+
+/ip dns set allow-remote-requests=yes \
+    servers=1.1.1.1,77.88.8.8,8.8.8.8 \
+    use-doh-server=https://dns.quad9.net/dns-query verify-doh-cert=yes
+
+/ip dns cache flush
+</code></pre>
+<hr />
+<h3 id="google">Google</h3>
+<ul>
+<li>CA list <a href="https://pki.goog/repository/">https://pki.goog/repository/</a> </li>
+</ul>
+<div class="admonition note">
+<p>MikroTik build-in root CA: <strong>OK</strong>    </p>
+</div>
+<h4 id="setup-commands_2">Setup commands</h4>
+<pre><code class="language-bash"># RoS 7.23
+# optional
+# /tool fetch url=https://i.pki.goog/r1.pem
+# /tool fetch url=https://i.pki.goog/r2.pem
+# /tool fetch url=https://i.pki.goog/r3.pem
+# /tool fetch url=https://i.pki.goog/r4.pem
+# /tool fetch url=https://i.pki.goog/gsr4.pem
+# /certificate import file-name=r1.pem
+# /certificate import file-name=r2.pem
+# /certificate import file-name=r3.pem
+# /certificate import file-name=r4.pem
+# /certificate import file-name=gsr4.pem
+
+/ip dns static
+add address=8.8.8.8 comment=&quot;DNS Google&quot; name=dns.google type=A
+add address=8.8.4.4 comment=&quot;DNS Google&quot; name=dns.google type=A
+
+/ip dns set allow-remote-requests=yes \
+    servers=1.1.1.1,77.88.8.8,8.8.8.8 \
+    use-doh-server=https://dns.google/dns-query verify-doh-cert=yes
+
+/ip dns cache flush
+</code></pre>
+<hr />
+<h3 id="comss">Comss</h3>
+<div class="admonition note">
+<p>CA switched to GlobalSign GCC R6 AlphaSSL CA<br />
+MikroTik build-in root CA: <strong>OK</strong>  </p>
+</div>
+<h4 id="setup-commands_3">Setup commands</h4>
+<pre><code class="language-bash"># RoS 7.23
+# recommended
+/tool/fetch url=https://secure.globalsign.com/cacert/gsgccr6alphasslca2025.crt
+/certificate/import file-name=gsgccr6alphasslca2025.crt
+
+/ip dns static
+add address=195.133.25.16 comment=&quot;DNS Comss&quot; name=dns.comss.one type=A
+add address=83.220.169.155 comment=&quot;DNS Comss&quot; name=dns.comss.one type=A
+add address=212.109.195.93 comment=&quot;DNS Comss&quot; name=dns.comss.one type=A
+
+/ip dns set allow-remote-requests=yes \
+    servers=1.1.1.1,77.88.8.8,8.8.8.8 \
+    use-doh-server=https://dns.comss.one/dns-query verify-doh-cert=yes
+
+/ip dns cache flush
+</code></pre>
+<hr />
+<h2 id="additional">Additional</h2>
+<h3 id="big-ca-list-with-all-certificates-2mb">Big CA list with all certificates ~ 2Mb</h3>
+<pre><code class="language-bash">/tool fetch url=https://curl.se/ca/cacert.pem
+/certificate import file-name=cacert.pem passphrase=&quot;&quot;
+</code></pre>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a href="../doh/#fast-doh-setup">How To Check DoH is working</a>  </p>
+</div>
+
+  <br>
+    
+
+    
+    
+      
+    
+
+  <div class="row wm-article-nav-buttons" role="navigation" aria-label="navigation">
+    
+    <div class="wm-article-nav pull-right">
+      <a href="../../firewall/fasttrack/" class="btn btn-xs btn-default pull-right">
+        Next
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+      </a>
+      <a href="../../firewall/fasttrack/" class="btn btn-xs btn-link">
+        FastTrack
+      </a>
+    </div>
+    
+    <div class="wm-article-nav">
+      <a href="../doh/" class="btn btn-xs btn-default pull-left">
+        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+        Previous</a><a href="../doh/" class="btn btn-xs btn-link">
+        DNS over HTTPs (DoH)
+      </a>
+    </div>
+    
+  </div>
+
+    <br>
+</div>
+
+<footer class="container-fluid wm-page-content">
+      <p>
+        <a href="https://github.com/xdenb43/mikrotik-wizardbook/edit/master/docs/dns/doh_minimum_certificates.md">Edit on xdenb43/mikrotik-wizardbook</a>
+      </p>
+  <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a> using <a href="https://github.com/gristlabs/mkdocs-windmill">Windmill</a> theme by Grist Labs.</p>
+</footer>
+
+</body>
+</html>

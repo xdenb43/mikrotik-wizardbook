@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+  
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <meta name="author" content="xdenb43">
+    <link rel="canonical" href="https://xdenb43.github.io/mikrotik-wizardbook/firewall/fasttrack/">
+    <link rel="shortcut icon" href="../../img/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <title>FastTrack - MikroTik Field Guide | The Packet Drop</title>
+    <link href="../../css/bootstrap-3.3.7.min.css" rel="stylesheet">
+    <link href="../../css/font-awesome-4.7.0.css" rel="stylesheet">
+    <link href="../../css/base.css" rel="stylesheet">
+    <link rel="stylesheet" href="../../css/highlight.css">
+    <link href="../../css/custom.css" rel="stylesheet">
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
+
+    <script src="../../js/jquery-3.2.1.min.js"></script>
+    <script src="../../js/bootstrap-3.3.7.min.js"></script>
+    <script src="../../js/highlight.pack.js"></script>
+    
+    <base target="_top">
+    <script>
+      var base_url = '../..';
+      var is_top_frame = false;
+        
+        var pageToc = [
+          {title: "How it works", url: "#_top", children: [
+          ]},
+          {title: "defconf:", url: "#defconf", children: [
+          ]},
+          {title: "NOT use FastTrack", url: "#not-use-fasttrack", children: [
+          ]},
+          {title: "Best FastTrack Layouts", url: "#best-fasttrack-layouts", children: [
+              {title: "Low-End Devices (hAP lite, hAP ac lite, RB750)", url: "#low-end-devices-hap-lite-hap-ac-lite-rb750" },
+              {title: "Mid-Range Devices (hAP ac\u00b2, ax\u00b2, ax\u00b3)", url: "#mid-range-devices-hap-ac2-ax2-ax3" },
+              {title: "High-End / Enterprise Devices (CCR2004, CCR2116, CCR2216, x86)", url: "#high-end-enterprise-devices-ccr2004-ccr2116-ccr2216-x86" },
+          ]},
+        ];
+
+    </script>
+    <script src="../../js/base.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    // Находим iframe, в котором тема Windmill отображает контент статьи
+    var iframe = document.getElementById('wm-article-frame') || document.querySelector('iframe');
+    
+    if (iframe) {
+      // Функция для обработки ссылок внутри iframe
+      function processIframeLinks() {
+        try {
+          var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+          // Ищем все внешние ссылки, которые начинаются с http/https
+          var links = iframeDoc.querySelectorAll('a[href^="http"]');
+          links.forEach(function(link) {
+            // Проверяем, что ссылка действительно внешняя (не ведет на наш локальный домен)
+            if (!link.href.includes(window.location.host)) {
+              link.setAttribute('target', '_blank');
+              link.setAttribute('rel', 'noopener noreferrer'); // Защита безопасности [1.12, 1.16, 1.17]
+            }
+          });
+        } catch (e) {
+          console.log("Iframe еще не доступен или заблокирован CORS:", e);
+        }
+      }
+
+      // Запускаем обработку при полной загрузке iframe
+      iframe.addEventListener('load', processIframeLinks);
+      // На всякий случай дублируем вызов (если iframe загрузился быстрее скрипта)
+      processIframeLinks();
+    }
+  });
+</script>
+
+</head>
+
+<body>
+<script>
+if (is_top_frame) { $('body').addClass('wm-top-page'); }
+</script>
+
+
+
+<div class="container-fluid wm-page-content">
+  <a name="_top"></a>
+    
+
+    <h1 id="fasttrack-in-routeros">FastTrack in RouterOS</h1>
+<p>Official documentation: <a href="https://manual.mikrotik.com/docs/firewall-and-quality-of-service/connection-tracking#fasttrack">https://manual.mikrotik.com/docs/firewall-and-quality-of-service/connection-tracking#fasttrack</a></p>
+<hr />
+<h2 id="how-it-works">How it works</h2>
+<p><img alt="scheme" src="../fasttrack.jpg" />  </p>
+<pre><code class="language-text">NEW connection
+    ↓
+conntrack
+    ↓
+firewall/mangle/NAT
+    ↓
+connection becomes established
+    ↓
+FastTrack rule match
+    ↓
+subsequent packets bypass slow path
+</code></pre>
+<div class="admonition attention">
+<p class="admonition-title">Improtant</p>
+<p>FastTrack works reliably only with the <strong>main</strong> routing table<br />
+traffic using policy routing, VRF, or routing marks should usually be excluded  </p>
+</div>
+<hr />
+<h2 id="defconf">defconf:</h2>
+<pre><code class="language-bash">/ip firewall filter
+
+add action=fasttrack-connection chain=forward \
+    comment=&quot;defconf: fasttrack&quot; \
+    connection-state=established,related
+
+add action=accept chain=forward \
+    comment=&quot;defconf: accept established,related, untracked&quot; \
+    connection-state=established,related,untracked
+
+add action=drop chain=forward \
+    comment=&quot;defconf: drop invalid&quot; \
+    connection-state=invalid
+</code></pre>
+<p>The <code>accept</code> rule after FastTrack is mandatory because some packets still use the normal processing path.<br />
+If you use any connection marking - just add <code>connection-mark=no-mark</code> condition to <code>fasttrack-connection</code> action</p>
+<pre><code class="language-bash">/ip firewall filter
+add action=fasttrack-connection chain=forward \
+    comment=&quot;defconf: fasttrack&quot; \
+    connection-mark=no-mark \
+    connection-state=established,related
+</code></pre>
+<hr />
+<h2 id="not-use-fasttrack">NOT use FastTrack</h2>
+<h4 id="usually-exclude">Usually exclude:</h4>
+<ul>
+<li>WireGuard with policy routing  </li>
+<li>IPsec  </li>
+<li>VRF  </li>
+<li>QoS / CAKE / FQ-Codel  </li>
+<li>queue tree  </li>
+<li>advanced mangle rules  </li>
+<li>traffic accounting  </li>
+<li>containers with custom routing  </li>
+<li>multi-WAN policy routing  </li>
+</ul>
+<h4 id="recommended-approach">Recommended approach:</h4>
+<ol>
+<li>exclude specific traffic first  </li>
+<li>fasttrack only regular LAN↔WAN traffic  </li>
+</ol>
+<hr />
+<h2 id="best-fasttrack-layouts">Best FastTrack Layouts</h2>
+<h3 id="low-end-devices-hap-lite-hap-ac-lite-rb750">Low-End Devices (hAP lite, hAP ac lite, RB750)</h3>
+<ul>
+<li>Keep configuration simple:  <ul>
+<li>minimal firewall  </li>
+<li>avoid heavy mangle  </li>
+<li>avoid queue tree  </li>
+<li>avoid containers  </li>
+<li>avoid unnecessary connection marks  </li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-bash"># RoS 7.23
+add action=fasttrack-connection chain=forward comment=&quot;defconf: fasttrack&quot; \
+    connection-mark=no-mark connection-state=established,related
+</code></pre>
+<hr />
+<h3 id="mid-range-devices-hap-ac2-ax2-ax3">Mid-Range Devices (hAP ac², ax², ax³)</h3>
+<ul>
+<li>FastTrack should only be applied to normal Internet traffic.  </li>
+<li>Exclude:  <ul>
+<li>WireGuard traffic  </li>
+<li>routing-mark traffic  </li>
+<li>container networks  </li>
+<li>QoS traffic  </li>
+</ul>
+</li>
+<li>Common symptoms of incorrect FastTrack usage:  <ul>
+<li>unstable WireGuard  </li>
+<li>broken TLS sessions  </li>
+<li>random website issues  </li>
+<li>intermittent routing problems    </li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-bash"># RoS 7.23
+# Add LAN-WAN direction, bi-direction is automatical   
+# exclude mangled traffic and containers
+# containers and their separate bridge must NOT belong to LAN
+# any VPN must NOT belong to WAN, use separate lists
+# process only &quot;usual clear&quot; traffic
+add action=fasttrack-connection chain=forward comment=&quot;defconf: fasttrack&quot; \
+    connection-mark=no-mark connection-state=established,related \
+    in-interface-list=LAN out-interface-list=WAN
+</code></pre>
+<h4 id="directonal-fasttrack-logic">Directonal FastTrack logic:</h4>
+<pre><code class="language-text">Request:    LAN (PC) ---------------------&gt; WAN (Internet)
+            in=LAN, out=WAN -&gt; rule matched
+
+Response:   WAN (Internet) ---------------&gt; LAN (PC)
+            in=WAN, out=LAN -&gt; rule NOT matched
+            BUT connection is marked already as fasttracked!
+</code></pre>
+<hr />
+<h3 id="high-end-enterprise-devices-ccr2004-ccr2116-ccr2216-x86">High-End / Enterprise Devices (CCR2004, CCR2116, CCR2216, x86)</h3>
+<ul>
+<li>FastTrack is often optional rather than required.    </li>
+<li>In enterprise networks, priorities are usually:  <ul>
+<li>routing accuracy  </li>
+<li>QoS  </li>
+<li>observability  </li>
+<li>traffic accounting  </li>
+<li>stable failover  </li>
+<li>VRF/MPLS functionality  </li>
+</ul>
+</li>
+<li>FastTrack is commonly used only for:  <ul>
+<li>guest traffic  </li>
+<li>bulk Internet traffic  </li>
+<li>simple office browsing  </li>
+</ul>
+</li>
+</ul>
+
+  <br>
+    
+
+    
+    
+      
+    
+
+  <div class="row wm-article-nav-buttons" role="navigation" aria-label="navigation">
+    
+    <div class="wm-article-nav pull-right">
+      <a href="../../scripts/check_ros_update/" class="btn btn-xs btn-default pull-right">
+        Next
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+      </a>
+      <a href="../../scripts/check_ros_update/" class="btn btn-xs btn-link">
+        Check RoS update
+      </a>
+    </div>
+    
+    <div class="wm-article-nav">
+      <a href="../../dns/doh_minimum_certificates/" class="btn btn-xs btn-default pull-left">
+        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+        Previous</a><a href="../../dns/doh_minimum_certificates/" class="btn btn-xs btn-link">
+        DoH certificates
+      </a>
+    </div>
+    
+  </div>
+
+    <br>
+</div>
+
+<footer class="container-fluid wm-page-content">
+      <p>
+        <a href="https://github.com/xdenb43/mikrotik-wizardbook/edit/master/docs/firewall/fasttrack.md">Edit on xdenb43/mikrotik-wizardbook</a>
+      </p>
+  <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a> using <a href="https://github.com/gristlabs/mkdocs-windmill">Windmill</a> theme by Grist Labs.</p>
+</footer>
+
+</body>
+</html>

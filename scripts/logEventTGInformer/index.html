@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+  
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <meta name="author" content="xdenb43">
+    <link rel="canonical" href="https://xdenb43.github.io/mikrotik-wizardbook/scripts/logEventTGInformer/">
+    <link rel="shortcut icon" href="../../img/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <title>Telegram informer - MikroTik Field Guide | The Packet Drop</title>
+    <link href="../../css/bootstrap-3.3.7.min.css" rel="stylesheet">
+    <link href="../../css/font-awesome-4.7.0.css" rel="stylesheet">
+    <link href="../../css/base.css" rel="stylesheet">
+    <link rel="stylesheet" href="../../css/highlight.css">
+    <link href="../../css/custom.css" rel="stylesheet">
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
+
+    <script src="../../js/jquery-3.2.1.min.js"></script>
+    <script src="../../js/bootstrap-3.3.7.min.js"></script>
+    <script src="../../js/highlight.pack.js"></script>
+    
+    <base target="_top">
+    <script>
+      var base_url = '../..';
+      var is_top_frame = false;
+        
+        var pageToc = [
+          {title: "Specs", url: "#_top", children: [
+          ]},
+          {title: "Logic", url: "#logic", children: [
+          ]},
+          {title: "Example", url: "#example", children: [
+          ]},
+          {title: "How To Use", url: "#how-to-use", children: [
+              {title: "commands", url: "#commands" },
+          ]},
+          {title: "Code", url: "#code", children: [
+          ]},
+        ];
+
+    </script>
+    <script src="../../js/base.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    // Находим iframe, в котором тема Windmill отображает контент статьи
+    var iframe = document.getElementById('wm-article-frame') || document.querySelector('iframe');
+    
+    if (iframe) {
+      // Функция для обработки ссылок внутри iframe
+      function processIframeLinks() {
+        try {
+          var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+          // Ищем все внешние ссылки, которые начинаются с http/https
+          var links = iframeDoc.querySelectorAll('a[href^="http"]');
+          links.forEach(function(link) {
+            // Проверяем, что ссылка действительно внешняя (не ведет на наш локальный домен)
+            if (!link.href.includes(window.location.host)) {
+              link.setAttribute('target', '_blank');
+              link.setAttribute('rel', 'noopener noreferrer'); // Защита безопасности [1.12, 1.16, 1.17]
+            }
+          });
+        } catch (e) {
+          console.log("Iframe еще не доступен или заблокирован CORS:", e);
+        }
+      }
+
+      // Запускаем обработку при полной загрузке iframe
+      iframe.addEventListener('load', processIframeLinks);
+      // На всякий случай дублируем вызов (если iframe загрузился быстрее скрипта)
+      processIframeLinks();
+    }
+  });
+</script>
+
+</head>
+
+<body>
+<script>
+if (is_top_frame) { $('body').addClass('wm-top-page'); }
+</script>
+
+
+
+<div class="container-fluid wm-page-content">
+  <a name="_top"></a>
+    
+
+    <h1 id="log-events-telegram-informer">Log events Telegram Informer</h1>
+<hr />
+<div class="admonition attention">
+<p class="admonition-title">RoS v7 and Telegram</p>
+<p>Telegram servers are protected by Cloudflare, which enforces complex TLS 1.3/ECH handshakes. The <code>fetch</code> utility in v7 has a very short hardcoded internal timer for completing the cryptographic handshake phase. Due to DPI inspections the packets could arrive with a slight delay    </p>
+<p>Also, <code>fetch</code> in v7 tries to resolve <code>api.telegram.org</code> in all accessible addresses, including IPv6 (AAAA records). Even you have no IPv6, Cloudflare returns IPv6-addresses. <code>fetch</code> tries to start handshake over IPv6, waites for timeout, then fallbacks to IPv4 and starts new handshake. At this moment internal timer timeouts, and <code>fetch</code> drops error <code>handshake timed out (6)</code></p>
+</div>
+<hr />
+<h2 id="specs">Specs</h2>
+<ul>
+<li>Created to post messages to dedicated topic of the specified supergroup telegram instance  </li>
+<li>Default filter:  <ul>
+<li><code>logsBuffer</code> variable  </li>
+<li>filter <code>topics~"(error|critical|netwatch)" || message~"([fF]ailure|router rebooted|checkRoSUpdate)"</code>  </li>
+</ul>
+</li>
+<li>Default ignoring filter:<ul>
+<li><code>ignoreInLog</code> variable   </li>
+<li>ignoring messages keywords: <ul>
+<li><code>static dns entry changed</code>  </li>
+<li><code>changed script settings</code>  </li>
+<li><code>HTTP</code>  </li>
+<li><code>changed scheduled script setting</code>  </li>
+</ul>
+</li>
+</ul>
+</li>
+<li>NO time-format related troubles, mikrotik internal function <code>:totime</code> used  </li>
+<li>Executes every <code>60</code> seconds</li>
+<li>Sends messages only if <code>api.telegram.org</code> is avaiable</li>
+<li>Uses limit to <code>4096</code> message symbols</li>
+<li>Uses <code>HTML</code> syntax for messages</li>
+</ul>
+<hr />
+<h2 id="logic">Logic</h2>
+<pre><code class="language-text">START
+|
+|─ [1] Scheduler exists? → NO: create scheduler (interval=60s)
+|
+|─ [2] Telegram available? (resolve api.telegram.org)
+|       |─ NO → exit (silent)
+|       |─ YES → continue
+|
+|─ [3] Get cursor (last event time) from scheduler comment
+|       |─ if empty → use &quot;1970-01-01 00:00:00&quot;
+|
+|─ [4] Find logs matching: error|critical|netwatch|failure|router rebooted|checkRoSUpdate
+|
+|─ [5] Filter logs:
+|       |─ ignore: &quot;static dns entry changed&quot;, &quot;changed script settings&quot;, &quot;HTTP&quot;, &quot;changed scheduled script setting&quot;
+|       |─ skip events older than cursor
+|
+|─ [6] Build message (max 4096 chars)
+|       |─ header: &quot;⚠️ &lt;code&gt;identity board-name&lt;/code&gt; ⚠️&quot;
+|
+|─ [7] Any new logs?
+        |─ YES → POST to Telegram API (HTML parse_mode)
+        |         |─ update cursor (save last event time to scheduler comment)
+        |─ NO → exit (silent)
+
+END
+</code></pre>
+<hr />
+<h2 id="example">Example</h2>
+<p><img alt="notification example" src="../logEventTGInformer.png" />  </p>
+<hr />
+<h2 id="how-to-use">How To Use</h2>
+<p>Add as script with name <code>logEventTGInformer</code><br />
+- policy: read, write, test<br />
+- do not require permission: no <br />
+- set your correct values instead of <code>TOKEN</code>, <code>CHATID</code>, <code>TOPICID</code>  </p>
+<div class="admonition bug">
+<p class="admonition-title">known issue</p>
+<p>log text parser failes for keyword <code>HTTP</code><br />
+so <code>HTTP</code> keyword added to ignore filter  </p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">If telegram is blocked</p>
+<p>allow MikroTik to access <code>api.telegram.org</code> via VPN<br />
+(well-configured VPN required)  </p>
+</div>
+<h3 id="commands">commands</h3>
+<pre><code class="language-bash"># allow MikroTik to connect api.telegram.org by itself
+# example with DNS FWD and vpn_out routing table
+/ip dns static
+add address-list=to_VPN_FWD comment=&quot;Messengers - Telegram - used by router itself&quot; disabled=no match-subdomain=yes name=api.telegram.org ttl=1d type=FWD
+
+/ip firewall mangle
+add action=mark-connection chain=output comment=&quot;MikroTik itself to vpn step 1&quot; connection-mark=no-mark dst-address-list=to_VPN_FWD dst-address-type=!local \
+    new-connection-mark=self_to_vpn
+add action=mark-routing chain=output comment=&quot;MikroTik itself  to vpn step 2&quot; connection-mark=self_to_vpn new-routing-mark=vpn_out passthrough=no
+</code></pre>
+<hr />
+<h2 id="code">Code</h2>
+<pre><code class="language-bash"># =================================== 
+# logEventTGInformer v2 | by xdenb43
+# 30.05.2026:
+#   - Fixed, Optimized &amp; Internet-aware
+#   - switch from unstable markdown to html format
+# tested on
+#   - RoS 7.23
+# =================================== 
+
+# -----------------------------------
+# CONFIGURATION
+# -----------------------------------
+:local scriptName &quot;logEventTGInformer&quot;;
+
+:local tgBotToken &quot;$TOKEN&quot;;
+:local tgChatId &quot;$CHATID&quot;;
+:local tgTopicId &quot;$TOPICID&quot;;
+
+:local tgUrl (&quot;https://api.telegram.org/bot&quot; . $tgBotToken . &quot;/sendMessage&quot;);
+:local mikrotId (&quot;&amp;#10071; &lt;code&gt;&quot; . [/system identity get name] . &quot; &quot; . [/system resource get board-name] . &quot;&lt;/code&gt; &amp;#10071;&quot;);
+:local messageHeader ($mikrotId . &quot;\n\n&quot;);
+
+:local logsBuffer [/log find \
+    topics~&quot;(error|critical|netwatch)&quot; || \
+    message~&quot;([fF]ailure|router rebooted|checkRoSUpdate)&quot;];
+:local ignoreInLog {
+    &quot;static dns entry changed&quot;; 
+    &quot;changed script settings&quot;; 
+    &quot;HTTP&quot;; 
+    &quot;changed scheduled script setting&quot;
+    };
+
+# 4KB of text (4096 latin characters).
+:local symbolsLimit 4096;
+:local defaultTime &quot;1970-01-01 00:00:00&quot;;
+
+# -----------------------------------
+# SCHEDULER
+# -----------------------------------
+# warn if schedule does not exist and create it
+:if ([:len [/system scheduler find name=&quot;$scriptName&quot;]] = 0) do={
+    /log warning &quot;[$scriptName] Alert : Schedule does not exist. Creating schedule ....&quot;;
+    :delay 1s;
+    /system scheduler add name=$scriptName interval=60s start-time=startup on-event=logEventTGInformer policy=read,write,test;
+    /log warning &quot;[$scriptName] Alert : Schedule created!&quot;;
+}
+
+# -----------------------------------
+# PRE-CHECK: REAL TELEGRAM AVAILABILITY (ICMP)
+# -----------------------------------
+:local telegramAvailable false;
+:if ([/tool ping api.telegram.org count=1] &gt; 0) do={
+    :set telegramAvailable true;
+} else={
+    :set telegramAvailable false;
+}
+
+# -----------------------------------
+# MAIN PART
+# -----------------------------------
+:if ($telegramAvailable) do={
+    # CURSOR (time-based)
+    :local lastCursor [/system scheduler get [find name=&quot;$scriptName&quot;] comment];
+    :if ([:len $lastCursor] = 0) do={
+        :set lastCursor ($defaultTime);
+    }
+
+    :local messageText $messageHeader;
+    :local eventCursor;
+    :if ([:len $logsBuffer] &gt; 0) do={
+        :foreach line in=$logsBuffer do={
+            :local eventTime [/log get $line time];
+            :if ([:len $eventTime] != 0) do={
+                :local message [:tostr [/log get $line message]];
+                :local keepLog true;
+
+                # ignore filter
+                :foreach j in=$ignoreInLog do={
+                    :if ($message ~ $j) do={
+                        :set keepLog false;
+                    }
+                }
+
+                :if ($keepLog &amp;&amp; ([:totime $eventTime] &gt; [:totime $lastCursor])) do={
+                    :local tempResult ($eventTime . &quot;\n&quot; . $message . &quot;\n\n&quot;);
+
+                    # lenght limit check
+                    :if (([:len $messageText] + [:len $tempResult]) &lt; $symbolsLimit) do={
+                        :set messageText ($messageText . $tempResult);
+                        :set eventCursor $eventTime;
+                    }
+                }
+            }
+        }
+    }
+
+    # send to telegram
+    :if ([:len $messageText] &gt; [:len $messageHeader]) do={
+        :local fetchSuccess false;
+
+        :do {
+            /tool fetch \
+                url=$tgUrl \
+                http-method=post \
+                http-header-field=&quot;Content-Type: application/json&quot; \
+                http-data=(&quot;{\&quot;chat_id\&quot;:\&quot;&quot; . $tgChatId . &quot;\&quot;,\&quot;message_thread_id\&quot;:\&quot;&quot; . $tgTopicId . &quot;\&quot;,\&quot;text\&quot;:\&quot;&quot; . $messageText . &quot;\&quot;,\&quot;parse_mode\&quot;:\&quot;HTML\&quot;}&quot;) \
+                keep-result=no;
+            :set fetchSuccess true;
+        } on-error={
+            # Telegram delivery failed (HTTP error or SSL timeout). Retrying next turn
+            :set fetchSuccess false;
+        }
+
+        :if ($fetchSuccess) do={
+            /system scheduler set [find name=$scriptName] comment=$eventCursor;
+        }
+    }
+}
+</code></pre>
+
+  <br>
+    
+
+    
+    
+      
+    
+
+  <div class="row wm-article-nav-buttons" role="navigation" aria-label="navigation">
+    
+    <div class="wm-article-nav pull-right">
+      <a href="../../utilities/ntp/" class="btn btn-xs btn-default pull-right">
+        Next
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+      </a>
+      <a href="../../utilities/ntp/" class="btn btn-xs btn-link">
+        NTP
+      </a>
+    </div>
+    
+    <div class="wm-article-nav">
+      <a href="../container_delayed_start/" class="btn btn-xs btn-default pull-left">
+        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+        Previous</a><a href="../container_delayed_start/" class="btn btn-xs btn-link">
+        Delayed containers start
+      </a>
+    </div>
+    
+  </div>
+
+    <br>
+</div>
+
+<footer class="container-fluid wm-page-content">
+      <p>
+        <a href="https://github.com/xdenb43/mikrotik-wizardbook/edit/master/docs/scripts/logEventTGInformer.md">Edit on xdenb43/mikrotik-wizardbook</a>
+      </p>
+  <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a> using <a href="https://github.com/gristlabs/mkdocs-windmill">Windmill</a> theme by Grist Labs.</p>
+</footer>
+
+</body>
+</html>

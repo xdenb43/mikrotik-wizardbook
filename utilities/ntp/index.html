@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+  
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <meta name="author" content="xdenb43">
+    <link rel="canonical" href="https://xdenb43.github.io/mikrotik-wizardbook/utilities/ntp/">
+    <link rel="shortcut icon" href="../../img/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <title>NTP - MikroTik Field Guide | The Packet Drop</title>
+    <link href="../../css/bootstrap-3.3.7.min.css" rel="stylesheet">
+    <link href="../../css/font-awesome-4.7.0.css" rel="stylesheet">
+    <link href="../../css/base.css" rel="stylesheet">
+    <link rel="stylesheet" href="../../css/highlight.css">
+    <link href="../../css/custom.css" rel="stylesheet">
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
+
+    <script src="../../js/jquery-3.2.1.min.js"></script>
+    <script src="../../js/bootstrap-3.3.7.min.js"></script>
+    <script src="../../js/highlight.pack.js"></script>
+    
+    <base target="_top">
+    <script>
+      var base_url = '../..';
+      var is_top_frame = false;
+        
+        var pageToc = [
+          {title: "NTP Client specific", url: "#_top", children: [
+          ]},
+          {title: "Best strategy", url: "#best-strategy", children: [
+          ]},
+          {title: "Setup commands", url: "#setup-commands", children: [
+          ]},
+        ];
+
+    </script>
+    <script src="../../js/base.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    // Находим iframe, в котором тема Windmill отображает контент статьи
+    var iframe = document.getElementById('wm-article-frame') || document.querySelector('iframe');
+    
+    if (iframe) {
+      // Функция для обработки ссылок внутри iframe
+      function processIframeLinks() {
+        try {
+          var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+          // Ищем все внешние ссылки, которые начинаются с http/https
+          var links = iframeDoc.querySelectorAll('a[href^="http"]');
+          links.forEach(function(link) {
+            // Проверяем, что ссылка действительно внешняя (не ведет на наш локальный домен)
+            if (!link.href.includes(window.location.host)) {
+              link.setAttribute('target', '_blank');
+              link.setAttribute('rel', 'noopener noreferrer'); // Защита безопасности [1.12, 1.16, 1.17]
+            }
+          });
+        } catch (e) {
+          console.log("Iframe еще не доступен или заблокирован CORS:", e);
+        }
+      }
+
+      // Запускаем обработку при полной загрузке iframe
+      iframe.addEventListener('load', processIframeLinks);
+      // На всякий случай дублируем вызов (если iframe загрузился быстрее скрипта)
+      processIframeLinks();
+    }
+  });
+</script>
+
+</head>
+
+<body>
+<script>
+if (is_top_frame) { $('body').addClass('wm-top-page'); }
+</script>
+
+
+
+<div class="container-fluid wm-page-content">
+  <a name="_top"></a>
+    
+
+    <h1 id="ntp-server-client-and-failover">NTP: Server, Client and Failover</h1>
+<p>Official documentation: <a href="https://manual.mikrotik.com/docs/system-information-and-utilities/ntp">https://manual.mikrotik.com/docs/system-information-and-utilities/ntp</a></p>
+<hr />
+<h2 id="ntp-client-specific">NTP Client specific</h2>
+<p>NTP server name resolution uses DNS FWD mechanism with IPv4 DNS resolvers.<br />
+Better not to use DoH resolvers due to risk of broken resolution. See DoH mechanism <a href="../../dns/doh/">here</a>  </p>
+<blockquote>
+<p>FQDN ("Resolved Address" will appear in the "Servers"- window in an appropriate column if the address is resolved) or IP address can be used. <br />
+If DHCP-Client property use-peer-ntp=yes - the dynamic entries advertised by DHCP to set the NTP server using its FQDN.<br />
+The domain name will be resolved each time an NTP request is sent. Router has to have /ip/dns configured.  </p>
+</blockquote>
+<p>NTP servers used (really excessive quantity):<br />
+- <a href="https://www.ntppool.org/zone/ru">ru.pool.ntp.org</a><br />
+- <a href="https://www.msk-ix.ru/ntp-server/">MSK-IX NTP Server</a><br />
+- <a href="https://www.vniiftri.ru/catalog/services/sinkhronizatsiya-vremeni-cherez-ntp-servera/">ФГУП «ВНИИФТРИ» Москва</a>  </p>
+<hr />
+<h2 id="best-strategy">Best strategy</h2>
+<ul>
+<li>disable <code>broadcast</code> &amp; <code>multicast</code>  <ul>
+<li>useless network junk for modern devices  </li>
+<li>decrease WiFi performace (uses lowest rates)  </li>
+<li>additional CPU load</li>
+</ul>
+</li>
+<li>disable <code>manycast</code>  <ul>
+<li>only for enterprise networks with several NTP Servers  </li>
+<li>useless for standaone Router  </li>
+</ul>
+</li>
+<li>use <code>unicast</code>        </li>
+</ul>
+<hr />
+<h2 id="setup-commands">Setup commands</h2>
+<pre><code class="language-bash"># ROS 7.23
+# defconf network 192.168.88.1/24
+
+/ip dhcp-client 
+set use-peer-ntp=no numbers=0 
+
+/ip dhcp-server network
+set ntp-server=192.168.88.1 numbers=0 
+
+# doh as example. Set yours
+/ip dns
+set allow-remote-requests=yes servers=8.8.8.8,1.1.1.1 use-doh-server=https://dns.google/dns-query verify-doh-cert=yes
+
+/ip dns forwarders
+add dns-servers=1.1.1.1,78.88.8.8,8.8.8.8 name=&quot;round-robin IPv4&quot;
+
+/ip dns static
+add comment=&quot;NTP over static ipv4 DNS&quot; disabled=no forward-to=&quot;round-robin IPv4&quot; match-subdomain=yes name=pool.ntp.org ttl=1d type=FWD
+add comment=&quot;NTP over static ipv4 DNS&quot; disabled=no forward-to=&quot;round-robin IPv4&quot; match-subdomain=yes name=ntp.msk-ix.ru ttl=1d type=FWD
+add comment=&quot;NTP over static ipv4 DNS&quot; disabled=no forward-to=&quot;round-robin IPv4&quot; match-subdomain=yes name=vniiftri.ru ttl=1d type=FWD
+
+/ip firewall nat
+add action=redirect chain=dstnat comment=&quot;Incoming NTP redirect&quot; dst-address-type=!local dst-port=123 in-interface-list=LAN protocol=udp
+
+/system clock
+set time-zone-autodetect=no time-zone-name=Europe/Moscow
+
+/system ntp client
+set enabled=yes
+/system ntp client servers
+add address=0.ru.pool.ntp.org
+add address=1.ru.pool.ntp.org
+add address=ntp.msk-ix.ru
+add address=ntp1.vniiftri.ru
+add address=ntp2.vniiftri.ru
+
+# broadcast=no multicast=no manycast=no
+/system ntp server
+set enabled=yes broadcast=no multicast=no manycast=no
+
+# security - drop NTP requests from WAN
+# place after defconf: drop invalid
+/ip firewall filter 
+add action=drop chain=input comment=&quot;drop WAN NTP requests&quot; dst-port=123 in-interface-list=WAN protocol=udp
+</code></pre>
+
+  <br>
+    
+
+    
+    
+      
+    
+
+  <div class="row wm-article-nav-buttons" role="navigation" aria-label="navigation">
+    
+    <div class="wm-article-nav pull-right">
+      <a href="../../vpn/l2tp_ipsec_client/" class="btn btn-xs btn-default pull-right">
+        Next
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+      </a>
+      <a href="../../vpn/l2tp_ipsec_client/" class="btn btn-xs btn-link">
+        L2TP/IPsec client
+      </a>
+    </div>
+    
+    <div class="wm-article-nav">
+      <a href="../../scripts/logEventTGInformer/" class="btn btn-xs btn-default pull-left">
+        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+        Previous</a><a href="../../scripts/logEventTGInformer/" class="btn btn-xs btn-link">
+        Telegram informer
+      </a>
+    </div>
+    
+  </div>
+
+    <br>
+</div>
+
+<footer class="container-fluid wm-page-content">
+      <p>
+        <a href="https://github.com/xdenb43/mikrotik-wizardbook/edit/master/docs/utilities/ntp.md">Edit on xdenb43/mikrotik-wizardbook</a>
+      </p>
+  <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a> using <a href="https://github.com/gristlabs/mkdocs-windmill">Windmill</a> theme by Grist Labs.</p>
+</footer>
+
+</body>
+</html>

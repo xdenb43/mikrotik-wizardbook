@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+  
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <meta name="author" content="xdenb43">
+    <link rel="canonical" href="https://xdenb43.github.io/mikrotik-wizardbook/dns/doh/">
+    <link rel="shortcut icon" href="../../img/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <title>DNS over HTTPs (DoH) - MikroTik Field Guide | The Packet Drop</title>
+    <link href="../../css/bootstrap-3.3.7.min.css" rel="stylesheet">
+    <link href="../../css/font-awesome-4.7.0.css" rel="stylesheet">
+    <link href="../../css/base.css" rel="stylesheet">
+    <link rel="stylesheet" href="../../css/highlight.css">
+    <link href="../../css/custom.css" rel="stylesheet">
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
+
+    <script src="../../js/jquery-3.2.1.min.js"></script>
+    <script src="../../js/bootstrap-3.3.7.min.js"></script>
+    <script src="../../js/highlight.pack.js"></script>
+    
+    <base target="_top">
+    <script>
+      var base_url = '../..';
+      var is_top_frame = false;
+        
+        var pageToc = [
+          {title: "Fast DoH setup", url: "#_top", children: [
+              {title: "Setup commands", url: "#setup-commands" },
+              {title: "How To Check DoH is working", url: "#how-to-check-doh-is-working" },
+          ]},
+          {title: "DoH and DNS tuning", url: "#doh-and-dns-tuning", children: [
+              {title: "DNS static entries", url: "#dns-static-entries" },
+              {title: "TIMEOUTS tuning", url: "#timeouts-tuning" },
+              {title: "DPI/RU tuning public DoH (hAP ax3)", url: "#dpiru-tuning-public-doh-hap-ax3" },
+              {title: "QUERIES tuning by model", url: "#queries-tuning-by-model" },
+              {title: "Cache size by model", url: "#cache-size-by-model" },
+              {title: "Troubleshooting:", url: "#troubleshooting" },
+          ]},
+          {title: "DoH provider selection considerations for Russia", url: "#doh-provider-selection-considerations-for-russia", children: [
+          ]},
+          {title: "Setup example by model and ISP", url: "#setup-example-by-model-and-isp", children: [
+          ]},
+        ];
+
+    </script>
+    <script src="../../js/base.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    // Находим iframe, в котором тема Windmill отображает контент статьи
+    var iframe = document.getElementById('wm-article-frame') || document.querySelector('iframe');
+    
+    if (iframe) {
+      // Функция для обработки ссылок внутри iframe
+      function processIframeLinks() {
+        try {
+          var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+          // Ищем все внешние ссылки, которые начинаются с http/https
+          var links = iframeDoc.querySelectorAll('a[href^="http"]');
+          links.forEach(function(link) {
+            // Проверяем, что ссылка действительно внешняя (не ведет на наш локальный домен)
+            if (!link.href.includes(window.location.host)) {
+              link.setAttribute('target', '_blank');
+              link.setAttribute('rel', 'noopener noreferrer'); // Защита безопасности [1.12, 1.16, 1.17]
+            }
+          });
+        } catch (e) {
+          console.log("Iframe еще не доступен или заблокирован CORS:", e);
+        }
+      }
+
+      // Запускаем обработку при полной загрузке iframe
+      iframe.addEventListener('load', processIframeLinks);
+      // На всякий случай дублируем вызов (если iframe загрузился быстрее скрипта)
+      processIframeLinks();
+    }
+  });
+</script>
+
+</head>
+
+<body>
+<script>
+if (is_top_frame) { $('body').addClass('wm-top-page'); }
+</script>
+
+
+
+<div class="container-fluid wm-page-content">
+  <a name="_top"></a>
+    
+
+    <h1 id="dns-over-https-doh">DNS over HTTPS (DoH)</h1>
+<p>Good official doc: <a href="https://manual.mikrotik.com/docs/network-management/dns#dns-over-https-doh">https://manual.mikrotik.com/docs/network-management/dns#dns-over-https-doh</a>  </p>
+<hr />
+<p><img alt="real behavior" src="../DoH_real_behavior.png" />  </p>
+<hr />
+<h2 id="fast-doh-setup">Fast DoH setup</h2>
+<div class="admonition caution">
+<p class="admonition-title">Caution</p>
+<ul>
+<li>allow-remote-requests=yes is mandatory to use MikroTik as DNS server  </li>
+<li>all peer DNS must be disabled  </li>
+<li>there is no auto-fallback from DoH to IPv4/IPv6 servers!</li>
+</ul>
+</div>
+<div class="admonition danger">
+<p class="admonition-title">Danger</p>
+<p>Import DoH-required certificates before setting DoH resolver, instruction <a href="../doh_minimum_certificates/">here</a>  </p>
+</div>
+<h3 id="setup-commands">Setup commands</h3>
+<pre><code class="language-bash"># RoS 7.23
+# disable peer dns
+/ip dhcp-client 
+set use-peer-dns=no numbers=0
+/interface lte apn
+set [ find default=yes ] use-peer-dns=no    
+
+# enable built-in CAs
+/certificate settings set builtin-trust-store=all
+
+/ip dns
+set allow-remote-requests=yes \
+    cache-max-ttl=1d \
+    servers=8.8.8.8,1.1.1.1 \
+    use-doh-server=https://dns.google/dns-query \
+    verify-doh-cert=yes
+
+# forward all DNS requests to MikroTik itself  
+/ip firewall nat
+add action=redirect chain=dstnat \
+    comment=&quot;Incoming DNS redirect&quot; \
+    dst-address-type=!local \
+    dst-port=53 \
+    in-interface-list=LAN \
+    protocol=udp
+add action=redirect chain=dstnat \
+    comment=&quot;Incoming DNS redirect&quot; \
+    dst-address-type=!local \
+    dst-port=53 \
+    in-interface-list=LAN \
+    protocol=tcp
+</code></pre>
+<h3 id="how-to-check-doh-is-working">How To Check DoH is working</h3>
+<pre><code class="language-bash"># RoS 7.23
+/tool/sniffer/quick port=443 ip-address=8.8.8.8
+Columns: INTERFACE, TIME, NUM, DIR, SRC-MAC, DST-MAC, SRC-ADDRESS, DST-ADDRESS, PROTOCOL, SIZE, CPU
+INTERFACE  TIME    NUM  DIR  SRC-MAC            DST-MAC            SRC-ADDRESS          DST-ADDRESS          PROTOCOL  SIZE  CPU
+ether1     13.06    37  &lt;-   9C:69:B4:66:DB:BC  F4:1E:57:29:00:BB  8.8.8.8:443 (https)  10.185.95.186:46666  ip:tcp     135    1
+ether1     13.06    38  -&gt;   F4:1E:57:29:00:BB  9C:69:B4:66:DB:BC  10.185.95.186:46666  8.8.8.8:443 (https)  ip:tcp      66    1
+ether1     13.061   39  -&gt;   F4:1E:57:29:00:BB  9C:69:B4:66:DB:BC  10.185.95.186:46666  8.8.8.8:443 (https)  ip:tcp     119    2
+ether1     13.061   40  -&gt;   F4:1E:57:29:00:BB  9C:69:B4:66:DB:BC  10.185.95.186:46666  8.8.8.8:443 (https)  ip:tcp     122    2
+ether1     13.061   41  -&gt;   F4:1E:57:29:00:BB  9C:69:B4:66:DB:BC  10.185.95.186:46666  8.8.8.8:443 (https)  ip:tcp     104    2
+ether1     13.061   42  -&gt;   F4:1E:57:29:00:BB  9C:69:B4:66:DB:BC  10.185.95.186:46666  8.8.8.8:443 (https)  ip:tcp     177    2
+ether1     13.061   43  -&gt;   F4:1E:57:29:00:BB  9C:69:B4:66:DB:BC  10.185.95.186:46666  8.8.8.8:443 (https)  ip:tcp     142    2
+ether1     13.087   44  &lt;-   9C:69:B4:66:DB:BC  F4:1E:57:29:00:BB  8.8.8.8:443 (https)  10.185.95.186:46666  ip:tcp      66    1
+ether1     13.087   45  &lt;-   9C:69:B4:66:DB:BC  F4:1E:57:29:00:BB  8.8.8.8:443 (https)  10.185.95.186:46666  ip:tcp     104    1
+ether1     13.087   46  -&gt;   F4:1E:57:29:00:BB  9C:69:B4:66:DB:BC  10.185.95.186:46666  8.8.8.8:443 (https)  ip:tcp      66    1
+ether1     13.087   47  &lt;-   9C:69:B4:66:DB:BC  F4:1E:57:29:00:BB  8.8.8.8:443 (https)  10.185.95.186:46666  ip:tcp      66    1
+ether1     13.097   48  &lt;-   9C:69:B4:66:DB:BC  F4:1E:57:29:00:BB  8.8.8.8:443 (https)  10.185.95.186:46666  ip:tcp     356    1
+ether1     13.097   49  &lt;-   9C:69:B4:66:DB:BC  F4:1E:57:29:00:BB  8.8.8.8:443 (https)  10.185.95.186:46666  ip:tcp     241    1
+ether1     13.097   50  &lt;-   9C:69:B4:66:DB:BC  F4:1E:57:29:00:BB  8.8.8.8:443 (https)  10.185.95.186:46666  ip:tcp     104    1
+ether1     13.097   51  -&gt;   F4:1E:57:29:00:BB  9C:69:B4:66:DB:BC  10.185.95.186:46666  8.8.8.8:443 (https)  ip:tcp      66    1
+ether1     13.098   52  &lt;-   9C:69:B4:66:DB:BC  F4:1E:57:29:00:BB  8.8.8.8:443 (https)  10.185.95.186:46666  ip:tcp     112    1
+ether1     13.098   53  -&gt;   F4:1E:57:29:00:BB  9C:69:B4:66:DB:BC  10.185.95.186:46666  8.8.8.8:443 (https)  ip:tcp      66    2
+ether1     13.098   54  -&gt;   F4:1E:57:29:00:BB  9C:69:B4:66:DB:BC  10.185.95.186:46666  8.8.8.8:443 (https)  ip:tcp      66    2
+ether1     13.098   55  -&gt;   F4:1E:57:29:00:BB  9C:69:B4:66:DB:BC  10.185.95.186:46666  8.8.8.8:443 (https)  ip:tcp     112    2
+ether1     13.128   56  &lt;-   9C:69:B4:66:DB:BC  F4:1E:57:29:00:BB  8.8.8.8:443 (https)  10.185.95.186:46666  ip:tcp      66    1
+</code></pre>
+<hr />
+<h2 id="doh-and-dns-tuning">DoH and DNS tuning</h2>
+<h3 id="dns-static-entries">DNS static entries</h3>
+<div class="admonition info">
+<ul>
+<li>No static entry for CloudFlare, because it uses agressive anycast and geo-routing</li>
+<li>Google uses more stable anycast and has <code>8.8.8.8</code> as a canonical endpoint</li>
+</ul>
+</div>
+<pre><code class="language-bash"># RoS 7.23
+/ip dns static
+add address=8.8.8.8 comment=&quot;DNS Google&quot; name=dns.google type=A
+add address=8.8.4.4 comment=&quot;DNS Google&quot; name=dns.google type=A
+</code></pre>
+<hr />
+<h3 id="timeouts-tuning">TIMEOUTS tuning</h3>
+<pre><code class="language-text">START
+|
+|─ [1] Count timeouts
+|       |- doh-timeout
+|       |- query-server-timeout
+|       |- query-total-timeout
+|       |- cache-max-ttl
+|
+|─ [2] Count queries
+|       |─ doh-max-server-connections
+|       |─ doh-max-concurrent-queries
+|       |- max-concurrent-tcp-sessions
+|       |- max-concurrent-queries
+|
+|─ [3] Count cache-size 
+|
+|─ [4] Balance counted values with recommended ones
+
+END
+</code></pre>
+<h4 id="recomended-world-wide-values-by-load">Recomended world-wide values by load</h4>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">DNS parameter</th>
+<th style="text-align: center;">Home usage<br>(1-15 devices)</th>
+<th style="text-align: center;">Small Office<br>(15-50 devices)</th>
+<th style="text-align: center;">Large Office<br>(50+ devices)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"><code>doh-timeout</code></td>
+<td style="text-align: center;">3-5s</td>
+<td style="text-align: center;">2-3s</td>
+<td style="text-align: center;">1-2s (sweet 1,5s)</td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>doh-max-server-connections</code></td>
+<td style="text-align: center;">5-10</td>
+<td style="text-align: center;">10-20</td>
+<td style="text-align: center;">50-100+</td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>doh-max-concurrent-queries</code></td>
+<td style="text-align: center;">100-150</td>
+<td style="text-align: center;">200-500</td>
+<td style="text-align: center;">1000+</td>
+</tr>
+</tbody>
+</table>
+<h4 id="hierarchy-of-stability-for-timeouts">Hierarchy of stability (for timeouts)</h4>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">timout</th>
+<th style="text-align: left;">stability</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">3s</td>
+<td style="text-align: left;">unstable</td>
+</tr>
+<tr>
+<td style="text-align: center;">4s</td>
+<td style="text-align: left;">borderline (especially Ru and PPPOE)</td>
+</tr>
+<tr>
+<td style="text-align: center;">5s</td>
+<td style="text-align: left;">stable production</td>
+</tr>
+<tr>
+<td style="text-align: center;">6s</td>
+<td style="text-align: left;">very safe</td>
+</tr>
+<tr>
+<td style="text-align: center;">7+s</td>
+<td style="text-align: left;">used rarely</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition info">
+<p class="admonition-title">Rules for timeouts</p>
+<p><code>doh-timeout</code> &gt;= <code>query-server-timeout</code><br />
+<code>query-total-timeout</code> &gt;= <code>doh-timeout</code> × 2 </p>
+</div>
+<h3 id="dpiru-tuning-public-doh-hap-ax3">DPI/RU tuning public DoH (hAP ax3)</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">DNS parameter</th>
+<th style="text-align: center;">WAN IPoE</th>
+<th style="text-align: center;">WAN PPPoE</th>
+<th style="text-align: center;">LTE</th>
+<th style="text-align: left;">comment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"><code>doh-timeout</code></td>
+<td style="text-align: center;">4–6s</td>
+<td style="text-align: center;">5–7s</td>
+<td style="text-align: center;">6–9s</td>
+<td style="text-align: left;">DPI/LTE: jitters</td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>query-server-timeout</code></td>
+<td style="text-align: center;">3–5s</td>
+<td style="text-align: center;">4–6s</td>
+<td style="text-align: center;">5–7s</td>
+<td style="text-align: left;"><code>query-server-timeout</code> &lt;= <code>doh-timeout</code></td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>query-total-timeout</code></td>
+<td style="text-align: center;">8–12s</td>
+<td style="text-align: center;">10–14s</td>
+<td style="text-align: center;">12–18s</td>
+<td style="text-align: left;"><code>query-total-timeout</code> ≥ <code>doh-timeout</code> × 2<br>DPI/LTE: jitterы</td>
+</tr>
+</tbody>
+</table>
+<h4 id="ipoe">IPoE</h4>
+<ul>
+<li>keep settings closer to the upper limit  </li>
+<li>stable RTT - parallelism is beneficial   </li>
+<li>the goal is <strong>minimal latency</strong>  </li>
+</ul>
+<h4 id="pppoe">PPPoE</h4>
+<ul>
+<li>PPP encapsulation + MTU 1492  </li>
+<li>more fragmentation sensitivity  </li>
+<li>often TCP retransmit for DPI shaping  </li>
+<li>need less parallelism, higher timeouts, less burst concurrency  </li>
+</ul>
+<h4 id="lte">LTE</h4>
+<ul>
+<li>benefits from less concurrency and a larger timeout window  </li>
+<li>the goal is <strong>not raw speed</strong>, but rather <strong>the absence of failures and retries</strong></li>
+</ul>
+<hr />
+<h3 id="queries-tuning-by-model">QUERIES tuning by model</h3>
+<div class="admonition info">
+<p class="admonition-title">Rules for queries</p>
+<p><code>doh-max-server-connections</code>: CPU cores × 1.5–2<br />
+<code>doh-max-concurrent-queries</code>: Connections × 4–6<br />
+<code>max-concurrent-queries</code>: DoH Queries × 2  <br />
+<code>max-concurrent-tcp-sessions</code>: Queries × 0.5–0.7   </p>
+</div>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">Device class/model</th>
+<th style="text-align: center;">CPU</th>
+<th style="text-align: center;">DoH Max Server Connections</th>
+<th style="text-align: center;">DoH Max Concurrent Queries</th>
+<th style="text-align: center;">Max Concurrent Queries</th>
+<th style="text-align: center;">Max Concurrent TCP Cessions</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"><strong>Low-End</strong><br>hAP lite, hAP mini, hAP ac lite, mAP</td>
+<td style="text-align: center;">1 core MIPSBE</td>
+<td style="text-align: center;">2-4<br>sweet: 4</td>
+<td style="text-align: center;">8-16<br>sweet: 16</td>
+<td style="text-align: center;">16-32<br>sweet: 32</td>
+<td style="text-align: center;">6-12<br>sweet: 12</td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>Mid-Range</strong><br>hEX S, hAP ac², hAP ax lite</td>
+<td style="text-align: center;">2–4 cores ARM/IPQ40xx</td>
+<td style="text-align: center;">4-8<br>sweet: 6</td>
+<td style="text-align: center;">16-40<br>sweet: 24</td>
+<td style="text-align: center;">32-80<br>sweet: 64</td>
+<td style="text-align: center;">12-24<br>sweet: 16</td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>Edge Mid-Range</strong><br>hAP ax², hAP ax³, RB4011</td>
+<td style="text-align: center;">4 cores ARM64</td>
+<td style="text-align: center;">8-12<br>sweet: 8</td>
+<td style="text-align: center;">32-64<br>sweet: 48</td>
+<td style="text-align: center;">64-128<br>sweet: 96</td>
+<td style="text-align: center;">20-40<br>sweet: 24</td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>High-End</strong><br>RB5009, CCR2004, CCR2116, CCR2216</td>
+<td style="text-align: center;">4–16+ cores ARM64</td>
+<td style="text-align: center;">12-24<br>sweet: 16</td>
+<td style="text-align: center;">64-144<br>sweet:  96</td>
+<td style="text-align: center;">128 -288<br>sweet:  192</td>
+<td style="text-align: center;">32-96<br>sweet: 48</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="cache-size-by-model">Cache size by model</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">Device class/model</th>
+<th style="text-align: center;">Cache Size</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"><strong>Low-End</strong><br>hAP lite, hAP mini, hAP ac lite, mAP</td>
+<td style="text-align: center;">2048–4096 KiB</td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>Mid-Range</strong><br>hEX S, hAP ac², hAP ax lite</td>
+<td style="text-align: center;">8192–16384 KiB</td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>Edge Mid-Range</strong><br>hAP ax², hAP ax³, RB4011</td>
+<td style="text-align: center;">16384–32768 KiB</td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>High-End</strong><br>RB5009, CCR2004, CCR2116, CCR2216</td>
+<td style="text-align: center;">32768–65536 KiB</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="troubleshooting">Troubleshooting:</h3>
+<p>In case of errors<br />
+- <code>timeout sending data</code><br />
+- <code>idle timeout</code><br />
+- <code>ssl handshake timeout</code><br />
+try to increase timeout firstly  </p>
+<hr />
+<h2 id="doh-provider-selection-considerations-for-russia">DoH provider selection considerations for Russia</h2>
+<h4 id="key-environmental-constraints">Key environmental constraints:</h4>
+<ul>
+<li>potential blocking of DoH domains  </li>
+<li>unstable access to public DNS providers (Cloudflare / Google)  </li>
+<li>DPI inspection of HTTPS traffic  </li>
+<li>increased latency when using foreign resolvers   </li>
+</ul>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">DoH role</th>
+<th style="text-align: center;">DoH provider</th>
+<th style="text-align: left;">Why?</th>
+<th style="text-align: left;">link</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">primary</td>
+<td style="text-align: center;">Google</td>
+<td style="text-align: left;">the most stable: <br>- best peering<br>- best routing<br>- more anycast presence<br>- less DPI troubles</td>
+<td style="text-align: left;"><code>https://dns.google/dns-query</code></td>
+</tr>
+<tr>
+<td style="text-align: center;">secondary</td>
+<td style="text-align: center;">CloudFlare</td>
+<td style="text-align: left;">fastest but problematic:<br> - unexpected timeouts<br>- packet loss<br>- routing issues ISP side <br>- unexpected periodical high jitter</td>
+<td style="text-align: left;"><code>https://cloudflare-dns.com/dns-query</code></td>
+</tr>
+<tr>
+<td style="text-align: center;">fallback</td>
+<td style="text-align: center;">Yandex</td>
+<td style="text-align: left;">stores everything</td>
+<td style="text-align: left;"><code>https://common.dot.dns.yandex.net/dns-query</code></td>
+</tr>
+<tr>
+<td style="text-align: center;">ignore</td>
+<td style="text-align: center;">Quad9</td>
+<td style="text-align: left;">- slow<br>- timeout heavy<br>- problematic routing</td>
+<td style="text-align: left;"><code>https://dns.quad9.net/dns-query</code></td>
+</tr>
+<tr>
+<td style="text-align: center;">specific</td>
+<td style="text-align: center;">Comss</td>
+<td style="text-align: left;">- unstable latency and routing<br>- blocked periodically by UFO<br>- mostly used for DNS FWD</td>
+<td style="text-align: left;"><code>https://dns.google/dns-query</code></td>
+</tr>
+</tbody>
+</table>
+<p>Cloudflare could look faster, but it's due to agressiveness with:<br />
+- edge caching<br />
+- anycast routing<br />
+- TLS optimization  </p>
+<p>MikroTik native DoH client is not so stable for such aggressiveness as Chrome DoH or AdGuard or dnsproxy, so even minor network problems will give:<br />
+- <code>DoH timeout</code><br />
+- <code>SSL handshake failed</code><br />
+- <code>idle timeout</code><br />
+- <code>connection reset</code>  </p>
+<h4 id="the-best-doh-choice-depending-on-the-environment">The best DoH choice depending on the environment</h4>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Cloudflare DoH</th>
+<th style="text-align: left;">Google DoH</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">large/federal ISP</td>
+<td style="text-align: left;">regional ISP</td>
+</tr>
+<tr>
+<td style="text-align: left;">Moscow/Spb</td>
+<td style="text-align: left;">unstable WAN or LTE</td>
+</tr>
+<tr>
+<td style="text-align: left;">stable international channel</td>
+<td style="text-align: left;">PPPoE</td>
+</tr>
+<tr>
+<td style="text-align: left;">ARM-based router</td>
+<td style="text-align: left;">low/mid range router</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="setup-example-by-model-and-isp">Setup example by model and ISP</h2>
+<h4 id="hap-ax3">hAP ax³</h4>
+<h5 id="stable-wan-connection-balanced-values">&gt; stable WAN connection (balanced values)</h5>
+<pre><code class="language-bash"># RoS 7.23
+# model = hAP ax³ | C53UiG+5HPaxD2HPaxD
+# WAN IPoE 200Mbps, ISP MTS, Google DoH
+
+/ip dhcp-client 
+set use-peer-dns=no numbers=0 
+/interface lte apn
+set [ find default=yes ] use-peer-dns=no
+
+/ip dns static
+add address=8.8.8.8 comment=&quot;Google DNS&quot; name=dns.google type=A
+add address=8.8.4.4 comment=&quot;Google DNS&quot; name=dns.google type=A
+
+# enable built-in CAs
+/certificate settings set builtin-trust-store=all
+
+/ip dns
+set allow-remote-requests=yes cache-max-ttl=12h cache-size=32768KiB \
+    doh-max-concurrent-queries=48 doh-max-server-connections=8 \
+    max-concurrent-queries=96 max-concurrent-tcp-sessions=24 \
+    max-udp-packet-size=1232 \
+    query-server-timeout=4s query-total-timeout=10s \
+    servers=8.8.8.8,1.1.1.1,77.88.8.8 \
+    use-doh-server=https://dns.google/dns-query verify-doh-cert=yes
+
+/ip firewall nat
+add action=redirect chain=dstnat comment=&quot;Incoming DNS redirect&quot; \
+    dst-address-type=!local dst-port=53 in-interface-list=LAN protocol=udp
+add action=redirect chain=dstnat comment=&quot;Incoming DNS redirect&quot; \
+    dst-address-type=!local dst-port=53 in-interface-list=LAN protocol=tcp
+</code></pre>
+<h5 id="ltenon-stable-wan-connection">&gt; LTE/non-stable WAN connection</h5>
+<pre><code class="language-bash">not tested
+</code></pre>
+<hr />
+<h4 id="hap-ac2">hAP ac²</h4>
+<h5 id="stable-wan-connection">&gt; stable WAN connection</h5>
+<pre><code class="language-bash">not tested
+</code></pre>
+<h5 id="ltenon-stable-wan-connection_1">&gt; LTE/non-stable WAN connection</h5>
+<pre><code class="language-bash">not tested
+</code></pre>
+<hr />
+<h4 id="hap-ac-lite-tc">hAP ac lite TC</h4>
+<h5 id="stable-wan-connection_1">&gt; stable WAN connection</h5>
+<pre><code class="language-bash"># RoS 7.23
+# model = hAP ac lite TC | RB952Ui-5ac2nD-TC
+# WAN IPoE 200Mbps, ISP MTS, Google DoH
+
+/ip dhcp-client 
+set use-peer-dns=no numbers=0 
+/interface lte apn
+set [ find default=yes ] use-peer-dns=no
+
+/ip dns static
+add address=8.8.8.8 comment=&quot;Google DNS&quot; name=dns.google type=A
+add address=8.8.4.4 comment=&quot;Google DNS&quot; name=dns.google type=A
+
+/certificate settings set builtin-trust-store=all
+
+/ip dns
+set allow-remote-requests=yes cache-max-ttl=12h cache-size=2048KiB \
+    doh-max-concurrent-queries=16 doh-max-server-connections=4 doh-timeout=5s \
+    max-concurrent-queries=32 max-concurrent-tcp-sessions=12 \
+    max-udp-packet-size=1232 \
+    query-server-timeout=4s query-total-timeout=10s \
+    servers=8.8.8.8,1.1.1.1,77.88.8.8 \
+    use-doh-server=https://dns.google/dns-query verify-doh-cert=yes
+
+/ip firewall nat
+add action=redirect chain=dstnat comment=&quot;Incoming DNS redirect&quot; \
+    dst-address-type=!local dst-port=53 in-interface-list=LAN protocol=udp
+add action=redirect chain=dstnat comment=&quot;Incoming DNS redirect&quot; \
+    dst-address-type=!local dst-port=53 in-interface-list=LAN protocol=tcp
+</code></pre>
+<h5 id="ltenon-stable-connection">&gt; LTE/non-stable connection</h5>
+<pre><code class="language-bash"># RoS 7.23
+# model = hAP ac lite TC | RB952Ui-5ac2nD-TC
+# LTE 30 Mbps, ISP Yota, Google DoH
+/ip dhcp-client 
+set use-peer-dns=no numbers=0 
+/interface lte apn
+set [ find default=yes ] use-peer-dns=no
+
+/ip dns static
+add address=8.8.8.8 comment=&quot;Google DNS&quot; name=dns.google type=A
+add address=8.8.4.4 comment=&quot;Google DNS&quot; name=dns.google type=A
+
+/certificate settings set builtin-trust-store=all
+
+/ip dns
+set allow-remote-requests=yes cache-max-ttl=1d cache-size=2048KiB \
+    doh-max-concurrent-queries=16 doh-max-server-connections=4 doh-timeout=7s \
+    max-concurrent-queries=32 max-concurrent-tcp-sessions=12 \
+    max-udp-packet-size=1232 \
+    query-server-timeout=6s query-total-timeout=15s \
+    servers=8.8.8.8,1.1.1.1,77.88.8.8 \
+    use-doh-server=https://dns.google/dns-query verify-doh-cert=yes
+
+/ip firewall nat
+add action=redirect chain=dstnat comment=&quot;Incoming DNS redirect&quot; \
+    dst-address-type=!local dst-port=53 in-interface-list=LAN protocol=udp
+add action=redirect chain=dstnat comment=&quot;Incoming DNS redirect&quot; \
+    dst-address-type=!local dst-port=53 in-interface-list=LAN protocol=tcp
+</code></pre>
+
+  <br>
+    
+
+    
+    
+      
+    
+
+  <div class="row wm-article-nav-buttons" role="navigation" aria-label="navigation">
+    
+    <div class="wm-article-nav pull-right">
+      <a href="../doh_minimum_certificates/" class="btn btn-xs btn-default pull-right">
+        Next
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+      </a>
+      <a href="../doh_minimum_certificates/" class="btn btn-xs btn-link">
+        DoH certificates
+      </a>
+    </div>
+    
+    <div class="wm-article-nav">
+      <a href="../dnsproxy/" class="btn btn-xs btn-default pull-left">
+        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+        Previous</a><a href="../dnsproxy/" class="btn btn-xs btn-link">
+        AdGuard dnsproxy
+      </a>
+    </div>
+    
+  </div>
+
+    <br>
+</div>
+
+<footer class="container-fluid wm-page-content">
+      <p>
+        <a href="https://github.com/xdenb43/mikrotik-wizardbook/edit/master/docs/dns/doh.md">Edit on xdenb43/mikrotik-wizardbook</a>
+      </p>
+  <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a> using <a href="https://github.com/gristlabs/mkdocs-windmill">Windmill</a> theme by Grist Labs.</p>
+</footer>
+
+</body>
+</html>
