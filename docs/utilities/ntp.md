@@ -76,3 +76,4 @@ set enabled=yes broadcast=no multicast=no manycast=no
 /ip firewall filter 
 add action=drop chain=input comment="drop WAN NTP requests" dst-port=123 in-interface-list=WAN protocol=udp
 ```
+---  

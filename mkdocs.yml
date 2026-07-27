@@ -53,4 +53,5 @@ nav:
   - '🔐 Virtual Private Network':
       - 'L2TP/IPsec client': vpn/l2tp_ipsec_client.md
   - '📶 WiFi':
-      - 'Wireless package': wifi/wireless.md
+      - 'WiFi 5/6 (802.11ac/ax)': wifi/wifi6.md
+      - 'Legacy wireless': wifi/legacy_wireless.md

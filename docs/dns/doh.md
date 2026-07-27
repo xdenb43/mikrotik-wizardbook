@@ -363,3 +363,4 @@ add action=redirect chain=dstnat comment="Incoming DNS redirect" \
 add action=redirect chain=dstnat comment="Incoming DNS redirect" \
     dst-address-type=!local dst-port=53 in-interface-list=LAN protocol=tcp
 ```  
+---  

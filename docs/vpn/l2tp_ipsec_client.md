@@ -78,3 +78,4 @@ add action=masquerade chain=srcnat comment="Masquerade L2TP " \
 /interface l2tp-client disable $CONNECTION_NAME
 /interface l2tp-client enable $CONNECTION_NAME
 ```
+---  

@@ -71,3 +71,4 @@ Add as script with name `checkRoSUpdate`
     /log info "[$scriptName] new RouterOS version available: $latestVersion";
 }
 ```
+---  

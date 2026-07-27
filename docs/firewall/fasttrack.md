@@ -20,7 +20,7 @@ FastTrack rule match
 subsequent packets bypass slow path
 ```  
 
-!!! attention "Improtant"    
+!!! attention "Important"    
     FastTrack works reliably only with the **main** routing table  
     traffic using policy routing, VRF, or routing marks should usually be excluded  
 ---  
@@ -136,3 +136,5 @@ Response:   WAN (Internet) ---------------> LAN (PC)
     - guest traffic  
     - bulk Internet traffic  
     - simple office browsing  
+
+---  

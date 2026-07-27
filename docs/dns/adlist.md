@@ -44,3 +44,4 @@ add address-list=AdsWhitelist comment="Huawei Weather app" name=hw.zuimeitianqi.
 /ip dns adlist
 add ssl-verify=no url=https://schakal.hopto.org/alive_hosts.txt
 ```
+---  

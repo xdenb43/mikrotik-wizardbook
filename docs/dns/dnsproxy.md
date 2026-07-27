@@ -94,3 +94,4 @@ Recommended values
 --upstream=https://cloudflare-dns.com/dns-query \
 --fallback=https://common.dot.dns.yandex.net/dns-query
 ```  
+---  
