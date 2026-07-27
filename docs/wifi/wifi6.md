@@ -95,6 +95,6 @@ add channel=ch-5ghz country=Russia disabled=no hw-protection-mode=none \
 set [ find default-name=wifi2 ] configuration=config-2ghz \
     configuration.mode=ap disabled=no name=wifi-2ghz
 set [ find default-name=wifi1 ] configuration=config-5ghz \
-    configuration.mode=ap disabled=no mtu=1500 name=wifi-5ghz
+    configuration.mode=ap disabled=no name=wifi-5ghz
 ```
 ---  
