@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+  
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <meta name="author" content="xdenb43">
+    <link rel="canonical" href="https://xdenb43.github.io/mikrotik-wizardbook/wifi/wifi6/">
+    <link rel="shortcut icon" href="../../img/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <title>WiFi 5/6 (802.11ac/ax) - MikroTik Field Guide | The Packet Drop</title>
+    <link href="../../css/bootstrap-3.3.7.min.css" rel="stylesheet">
+    <link href="../../css/font-awesome-4.7.0.css" rel="stylesheet">
+    <link href="../../css/base.css" rel="stylesheet">
+    <link rel="stylesheet" href="../../css/highlight.css">
+    <link href="../../css/custom.css" rel="stylesheet">
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
+
+    <script src="../../js/jquery-3.2.1.min.js"></script>
+    <script src="../../js/bootstrap-3.3.7.min.js"></script>
+    <script src="../../js/highlight.pack.js"></script>
+    
+    <base target="_top">
+    <script>
+      var base_url = '../..';
+      var is_top_frame = false;
+        
+        var pageToc = [
+          {title: "Recommended values for standalone router", url: "#_top", children: [
+              {title: "Security", url: "#security" },
+              {title: "Channel", url: "#channel" },
+              {title: "Configuration", url: "#configuration" },
+          ]},
+          {title: "Config example (hAP ax\u00b3)", url: "#config-example-hap-ax3", children: [
+          ]},
+        ];
+
+    </script>
+    <script src="../../js/base.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    // Находим iframe, в котором тема Windmill отображает контент статьи
+    var iframe = document.getElementById('wm-article-frame') || document.querySelector('iframe');
+    
+    if (iframe) {
+      // Функция для обработки ссылок внутри iframe
+      function processIframeLinks() {
+        try {
+          var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+          // Ищем все внешние ссылки, которые начинаются с http/https
+          var links = iframeDoc.querySelectorAll('a[href^="http"]');
+          links.forEach(function(link) {
+            // Проверяем, что ссылка действительно внешняя (не ведет на наш локальный домен)
+            if (!link.href.includes(window.location.host)) {
+              link.setAttribute('target', '_blank');
+              link.setAttribute('rel', 'noopener noreferrer'); // Защита безопасности [1.12, 1.16, 1.17]
+            }
+          });
+        } catch (e) {
+          console.log("Iframe еще не доступен или заблокирован CORS:", e);
+        }
+      }
+
+      // Запускаем обработку при полной загрузке iframe
+      iframe.addEventListener('load', processIframeLinks);
+      // На всякий случай дублируем вызов (если iframe загрузился быстрее скрипта)
+      processIframeLinks();
+    }
+  });
+</script>
+
+</head>
+
+<body>
+<script>
+if (is_top_frame) { $('body').addClass('wm-top-page'); }
+</script>
+
+
+
+<div class="container-fluid wm-page-content">
+  <a name="_top"></a>
+    
+
+    <h1 id="wifi-56-80211acax">WiFi 5/6 (802.11ac/ax)</h1>
+<p>Good official doc: <a href="https://manual.mikrotik.com/docs/wireless/">https://manual.mikrotik.com/docs/wireless/</a> </p>
+<div class="admonition note">
+<p class="admonition-title">Applicable for</p>
+<ul>
+<li>/interface/wifi/  </li>
+<li>wifi-qcom  </li>
+<li>wifi-mediatek (hAP ax S)  </li>
+</ul>
+</div>
+<hr />
+<h2 id="recommended-values-for-standalone-router">Recommended values for standalone router</h2>
+<div class="admonition tip">
+<p class="admonition-title">universal for</p>
+<ul>
+<li>common 2.4ghz and 5ghz SSID</li>
+<li>mix of modern and legacy devices  </li>
+<li>IoT devices  </li>
+<li>noisy env  </li>
+</ul>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">warning</p>
+<ul>
+<li>no explicit band steering set - let clients to choose the preferable band  </li>
+<li>implicit band steering simulated by TX power values  </li>
+<li><code>FT</code> (802.11r) and <code>FT over DS</code> are <code>disabled</code> for standalone router  </li>
+</ul>
+</div>
+<h3 id="security">Security</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">parameter</th>
+<th style="text-align: center;">2.4ghz value</th>
+<th style="text-align: center;">5ghz value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"><code>authentication-types</code></td>
+<td style="text-align: center;"><code>wpa2-psk</code></td>
+<td style="text-align: center;"><code>wpa2-psk + wpa3-psk</code>: recommended <br> <code>wpa3</code>: dedicated modern SSID only</td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>encryption</code></td>
+<td style="text-align: center;"><code>ccmp</code></td>
+<td style="text-align: center;"><code>ccmp</code>: best compatibility <br> <code>ccmp + gcmp</code>: if all clients support GCMP</td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>group-encryption</code></td>
+<td style="text-align: center;"><code>ccmp</code></td>
+<td style="text-align: center;">the same</td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>group-key-update</code></td>
+<td style="text-align: center;"><code>1d</code>: recommended for home <br> <code>1hr</code>: enterprise / high-security</td>
+<td style="text-align: center;">the same</td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>management-protection</code></td>
+<td style="text-align: center;"><code>allowed</code></td>
+<td style="text-align: center;"><code>allowed</code>: recommended <br> <code>required</code>: dedicated WPA3-only SSID</td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>wps</code></td>
+<td style="text-align: center;"><code>disable</code></td>
+<td style="text-align: center;">the same</td>
+</tr>
+</tbody>
+</table>
+<h3 id="channel">Channel</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">parameter</th>
+<th style="text-align: center;">2.4ghz value</th>
+<th style="text-align: center;">5ghz value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"><code>band</code></td>
+<td style="text-align: center;"><code>2ghz-ax</code></td>
+<td style="text-align: center;"><code>5ghz-ax</code></td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>frequency</code></td>
+<td style="text-align: center;"><code>2412</code>: ch. 1<br><code>2437</code>: ch. 6<br><code>2462</code>: ch. 11</td>
+<td style="text-align: center;"><code>5200</code>: ch. 40 preferred <br> if congested <code>5260</code> (ch. 52) or <code>5500</code> (ch. 100)</td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>width</code></td>
+<td style="text-align: center;"><code>20mhz</code></td>
+<td style="text-align: center;"><code>20/40/80mhz</code></td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>reselect-interval</code></td>
+<td style="text-align: center;"><code>1d</code>: automatically selects the best channel from the configured frequency list</td>
+<td style="text-align: center;"><code>none</code><br>fixed channel recommended</td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>reselect-time</code></td>
+<td style="text-align: center;"><code>04:00:00</code>: recommended for home use <br> (04:00–05:00)</td>
+<td style="text-align: center;"><code>none</code><br>fixed channel recommended</td>
+</tr>
+</tbody>
+</table>
+<h3 id="configuration">Configuration</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">parameter</th>
+<th style="text-align: center;">2.4ghz value</th>
+<th style="text-align: center;">5ghz value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"><code>country</code></td>
+<td style="text-align: center;"><code>Russia</code></td>
+<td style="text-align: center;">the same</td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>hw-protection-mode</code></td>
+<td style="text-align: center;"><code>none</code>: recommended, maximum throughput <br><code>cts-to-self</code>: 802.11b compatibility, rarely used <br><code>rts-cts</code>: hidden nodes / excessive retries / CCQ &lt;60-70%</td>
+<td style="text-align: center;">the same</td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>installation</code></td>
+<td style="text-align: center;"><code>indoor</code>: recommended for home use<br> <code>outdoor</code>: outdoor links only</td>
+<td style="text-align: center;">the same</td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>multicast-enhance</code></td>
+<td style="text-align: center;"><code>disabled</code>: recommended for home<br><code>full</code>: IPTV, Chromecast, AirPlay, multicast-heavy networks</td>
+<td style="text-align: center;">the same</td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>tx-power</code></td>
+<td style="text-align: center;"><code>12 dBm</code> <br>prefer 5 GHz by reducing 2.4 GHz coverage</td>
+<td style="text-align: center;"><code>17 dBm</code><br>good balance between coverage and throughput</td>
+</tr>
+<tr>
+<td style="text-align: center;"><code>dtim-period</code></td>
+<td style="text-align: center;"><code>0</code>: auto (driver default)</td>
+<td style="text-align: center;"><code>3</code>: for Apple compatibility</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="config-example-hap-ax3">Config example (hAP ax³)</h2>
+<pre><code class="language-bash"># RoS 7.23.2
+# common SSID for 2.4ghz and 5ghz
+# replace $MYSSID and $MYKEY
+
+# security
+/interface wifi security
+add authentication-types=wpa2-psk,wpa3-psk disabled=no \
+    encryption=ccmp group-encryption=ccmp group-key-update=1d \
+    management-protection=allowed \
+    name=sec-default passphrase=&quot;$MYKEY&quot; wps=disable
+add authentication-types=wpa2-psk disabled=no \
+    encryption=ccmp group-encryption=ccmp group-key-update=1d \
+    management-protection=allowed \
+    name=sec-2ghz passphrase=&quot;$MYKEY&quot; wps=disable
+
+# channel
+/interface wifi channel
+add band=5ghz-ax disabled=no frequency=5200 name=ch-5ghz width=20/40/80mhz
+add band=2ghz-ax disabled=no frequency=2412,2437,2462 name=ch-2ghz width=20mhz \
+    reselect-interval=1d reselect-time=04:00:00
+
+# configuration
+/interface wifi configuration
+add channel=ch-2ghz country=Russia disabled=no hw-protection-mode=none \
+    installation=indoor mode=ap multicast-enhance=disabled \
+    name=config-2ghz security=sec-2ghz ssid=$MYSSID \
+    tx-power=12
+add channel=ch-5ghz country=Russia disabled=no hw-protection-mode=none \
+    installation=indoor mode=ap multicast-enhance=disabled \
+    name=config-5ghz security=sec-default ssid=$MYSSID \
+    tx-power=17 \
+    dtim-period=3
+
+# interface
+/interface wifi
+set [ find default-name=wifi2 ] configuration=config-2ghz \
+    configuration.mode=ap disabled=no name=wifi-2ghz
+set [ find default-name=wifi1 ] configuration=config-5ghz \
+    configuration.mode=ap disabled=no mtu=1500 name=wifi-5ghz
+</code></pre>
+<hr />
+
+  <br>
+    
+
+    
+    
+      
+    
+
+  <div class="row wm-article-nav-buttons" role="navigation" aria-label="navigation">
+    
+    <div class="wm-article-nav pull-right">
+      <a href="../legacy_wireless/" class="btn btn-xs btn-default pull-right">
+        Next
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+      </a>
+      <a href="../legacy_wireless/" class="btn btn-xs btn-link">
+        Legacy wireless
+      </a>
+    </div>
+    
+    <div class="wm-article-nav">
+      <a href="../../vpn/l2tp_ipsec_client/" class="btn btn-xs btn-default pull-left">
+        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+        Previous</a><a href="../../vpn/l2tp_ipsec_client/" class="btn btn-xs btn-link">
+        L2TP/IPsec client
+      </a>
+    </div>
+    
+  </div>
+
+    <br>
+</div>
+
+<footer class="container-fluid wm-page-content">
+      <p>
+        <a href="https://github.com/xdenb43/mikrotik-wizardbook/edit/master/docs/wifi/wifi6.md">Edit on xdenb43/mikrotik-wizardbook</a>
+      </p>
+  <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a> using <a href="https://github.com/gristlabs/mkdocs-windmill">Windmill</a> theme by Grist Labs.</p>
+</footer>
+
+</body>
+</html>
