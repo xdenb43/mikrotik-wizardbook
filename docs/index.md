@@ -1,4 +1,4 @@
-# MikroTik Field Guide
+# MikroTik WizardBook
 
 > A practical engineering handbook for MikroTik RouterOS.
 
