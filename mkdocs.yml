@@ -52,6 +52,7 @@ nav:
       - 'NTP': utilities/ntp.md
   - '🔐 Virtual Private Network':
       - 'L2TP/IPsec client': vpn/l2tp_ipsec_client.md
+      - 'BTH over Amnezia client': vpn/bth_amnezia_client.md
   - '📶 WiFi':
       - 'WiFi 5/6 (802.11ac/ax)': wifi/wifi6.md
       - 'Legacy wireless': wifi/legacy_wireless.md
