@@ -142,8 +142,8 @@ The tested results showed that:
 
 ## Troubleshooting
 ### Connection works but feels slow  
-Try reducing `Jc`
-Large junk packet counts increase initial connection latency.
+Try reducing `Jc`  
+Large junk packet counts increase initial connection latency.  
 
 ### Speed is normal but websites open slowly  
 Check:
