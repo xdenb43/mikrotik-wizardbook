@@ -16,8 +16,8 @@ hooks:
 extra:  
   # logo: 'images/my_logo.png'
   history_buttons: false # history next/prev bottom panel
-  article_nav_top: false # next/perv articale
-  article_nav_bottom: true # next/perv articale
+  article_nav_top: false # next/prev articale
+  article_nav_bottom: true # next/prev articale
 
 extra_css:
   - css/custom.css
@@ -44,6 +44,7 @@ nav:
         - 'DoH certificates': dns/doh_minimum_certificates.md
   - '🧱 Firewall':
       - 'FastTrack': firewall/fasttrack.md
+      - 'Filter': firewall/filter.md
   - '📜 Scripts':
       - 'Check RoS update': scripts/check_ros_update.md
       - 'Delayed containers start': scripts/container_delayed_start.md
