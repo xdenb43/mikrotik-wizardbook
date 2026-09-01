@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+  
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <meta name="author" content="xdenb43">
+    <link rel="canonical" href="https://xdenb43.github.io/mikrotik-wizardbook/firewall/filter/">
+    <link rel="shortcut icon" href="../../img/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <title>Filter - MikroTik WizardBook | The Packet Drop</title>
+    <link href="../../css/bootstrap-3.3.7.min.css" rel="stylesheet">
+    <link href="../../css/font-awesome-4.7.0.css" rel="stylesheet">
+    <link href="../../css/base.css" rel="stylesheet">
+    <link rel="stylesheet" href="../../css/highlight.css">
+    <link href="../../css/custom.css" rel="stylesheet">
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
+
+    <script src="../../js/jquery-3.2.1.min.js"></script>
+    <script src="../../js/bootstrap-3.3.7.min.js"></script>
+    <script src="../../js/highlight.pack.js"></script>
+    
+    <base target="_top">
+    <script>
+      var base_url = '../..';
+      var is_top_frame = false;
+        
+        var pageToc = [
+          {title: "IPv4 minimal rules", url: "#_top", children: [
+              {title: "defconf:", url: "#defconf" },
+              {title: "customized:", url: "#customized" },
+          ]},
+        ];
+
+    </script>
+    <script src="../../js/base.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    // Находим iframe, в котором тема Windmill отображает контент статьи
+    var iframe = document.getElementById('wm-article-frame') || document.querySelector('iframe');
+    
+    if (iframe) {
+      // Функция для обработки ссылок внутри iframe
+      function processIframeLinks() {
+        try {
+          var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+          // Ищем все внешние ссылки, которые начинаются с http/https
+          var links = iframeDoc.querySelectorAll('a[href^="http"]');
+          links.forEach(function(link) {
+            // Проверяем, что ссылка действительно внешняя (не ведет на наш локальный домен)
+            if (!link.href.includes(window.location.host)) {
+              link.setAttribute('target', '_blank');
+              link.setAttribute('rel', 'noopener noreferrer'); // Защита безопасности [1.12, 1.16, 1.17]
+            }
+          });
+        } catch (e) {
+          console.log("Iframe еще не доступен или заблокирован CORS:", e);
+        }
+      }
+
+      // Запускаем обработку при полной загрузке iframe
+      iframe.addEventListener('load', processIframeLinks);
+      // На всякий случай дублируем вызов (если iframe загрузился быстрее скрипта)
+      processIframeLinks();
+    }
+  });
+</script>
+
+</head>
+
+<body>
+<script>
+if (is_top_frame) { $('body').addClass('wm-top-page'); }
+</script>
+
+
+
+<div class="container-fluid wm-page-content">
+  <a name="_top"></a>
+    
+
+    <h1 id="filter">Filter</h1>
+<p>Official documentation: <a href="https://manual.mikrotik.com/docs/firewall-and-quality-of-service/firewall/filter">https://manual.mikrotik.com/docs/firewall-and-quality-of-service/firewall/filter</a></p>
+<div class="admonition note">
+<p>There are two methods to set up filtering:<br />
+    - Allow specific traffic and drop everything else.<br />
+    - Drop only malicious traffic, everything else is allowed.</p>
+</div>
+<hr />
+<h2 id="ipv4-minimal-rules">IPv4 minimal rules</h2>
+<h3 id="defconf">defconf:</h3>
+<pre><code class="language-bash">/ip firewall filter  
+add chain=input action=accept connection-state=established,related,untracked comment=&quot;defconf: accept established,related,untracked&quot;               
+add chain=input action=drop connection-state=invalid comment=&quot;defconf: drop invalid&quot;                                                               
+add chain=input action=accept protocol=icmp comment=&quot;defconf: accept ICMP&quot;                                                                         
+add chain=input action=accept src-address=127.0.0.1 dst-address=127.0.0.1 in-interface=lo comment=&quot;defconf: accept to local loopback (for CAPsMAN)&quot;
+add chain=input action=drop in-interface-list=!LAN comment=&quot;defconf: drop all not coming from LAN&quot;                                                 
+
+add chain=forward action=accept ipsec-policy=in,ipsec comment=&quot;defconf: accept in ipsec policy&quot;                                                    
+add chain=forward action=accept ipsec-policy=out,ipsec comment=&quot;defconf: accept out ipsec policy&quot;
+
+add chain=forward action=fasttrack-connection connection-state=established,related comment=&quot;defconf: fasttrack&quot;                                    
+add chain=forward action=accept connection-state=established,related,untracked comment=&quot;defconf: accept established,related, untracked&quot;            
+add chain=forward action=drop connection-state=invalid comment=&quot;defconf: drop invalid&quot;                                                             
+add chain=forward action=drop connection-nat-state=!dstnat in-interface-list=WAN comment=&quot;defconf: drop all from WAN not DSTNATed&quot;                 
+</code></pre>
+<hr />
+<h3 id="customized">customized:</h3>
+<p>Source: <a href="https://www.youtube.com/watch?v=lFvGdRUqeMQ">https://www.youtube.com/watch?v=lFvGdRUqeMQ</a></p>
+<div class="admonition attention">
+<p class="admonition-title">attention</p>
+<ul>
+<li>Interface lists <strong>must</strong> be configured <strong>smartly</strong>   </li>
+<li>IPSEC, CAPsMAN and other specific things skipped in minimal rules list   </li>
+</ul>
+</div>
+<pre><code class="language-bash">/ip firewall address-list
+add address=192.168.88.0/24 comment=&quot;default LAN&quot; list=Allowed-LAN
+add address=192.168.216.0/24 comment=&quot;Back-to-Home&quot; list=Allowed-LAN
+add address=$TRUSTED_NET_IPv4 comment=&quot;$TRUSTED_NET&quot; list=Allowed-LAN
+
+/ip firewall filter
+add chain=input action=accept connection-state=established,related,untracked comment=&quot;accept established,related,untracked&quot; 
+add chain=input action=drop connection-state=invalid in-interface-list=WAN comment=&quot;drop invalid&quot; 
+add chain=input action=accept src-address-list=Allowed-LAN comment=&quot;accept trusted management sources&quot; 
+add chain=input action=drop in-interface-list=WAN comment=&quot;drop all traffic from WAN&quot; 
+add chain=input action=drop comment=&quot;drop everything else&quot;
+
+add chain=forward action=fasttrack-connection connection-mark=no-mark connection-state=established,related in-interface-list=LAN out-interface-list=WAN  comment=&quot;bi-directional fasttrack&quot; 
+add chain=forward action=accept connection-state=established,related,untracked comment=&quot;accept established,related, untracked&quot; 
+add chain=forward action=drop connection-state=invalid in-interface-list=WAN comment=&quot;drop invalid&quot; 
+add chain=forward action=drop connection-nat-state=!dstnat in-interface-list=WAN comment=&quot;drop all from WAN not DSTNATed&quot; 
+</code></pre>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a href="../fasttrack/">FastTrack in RouterOS</a>   </p>
+</div>
+<hr />
+
+  <br>
+    
+
+    
+    
+      
+    
+
+  <div class="row wm-article-nav-buttons" role="navigation" aria-label="navigation">
+    
+    <div class="wm-article-nav pull-right">
+      <a href="../../scripts/check_ros_update/" class="btn btn-xs btn-default pull-right">
+        Next
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+      </a>
+      <a href="../../scripts/check_ros_update/" class="btn btn-xs btn-link">
+        Check RoS update
+      </a>
+    </div>
+    
+    <div class="wm-article-nav">
+      <a href="../fasttrack/" class="btn btn-xs btn-default pull-left">
+        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+        Previous</a><a href="../fasttrack/" class="btn btn-xs btn-link">
+        FastTrack
+      </a>
+    </div>
+    
+  </div>
+
+    <br>
+</div>
+
+<footer class="container-fluid wm-page-content">
+      <p>
+        <a href="https://github.com/xdenb43/mikrotik-wizardbook/edit/master/docs/firewall/filter.md">Edit on xdenb43/mikrotik-wizardbook</a>
+      </p>
+  <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a> using <a href="https://github.com/gristlabs/mkdocs-windmill">Windmill</a> theme by Grist Labs.</p>
+</footer>
+
+</body>
+</html>
