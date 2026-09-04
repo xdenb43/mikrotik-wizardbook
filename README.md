@@ -9,8 +9,6 @@
 [![Last Commit](https://img.shields.io/github/last-commit/xdenb43/mikrotik-wizardbook)](https://github.com/xdenb43/mikrotik-wizardbook/commits/main)
 [![Build](https://img.shields.io/github/actions/workflow/status/xdenb43/mikrotik-wizardbook/deploy.yml?branch=main)](https://github.com/xdenb43/mikrotik-wizardbook/actions)
 
----
-
 ## Overview
 
 **MikroTik WizardBook** is a practical engineering knowledge base focused on MikroTik RouterOS.
@@ -19,15 +17,11 @@ Unlike traditional documentation, this project emphasizes real-world deployment 
 
 The primary goal is to explain not only **how** to configure RouterOS, but also **why** a particular solution should be used.
 
----
-
 ## Documentation
 
 📖 **Online documentation**
 
 https://xdenb43.github.io/mikrotik-wizardbook/
-
----
 
 ## Current Topics
 
@@ -39,8 +33,6 @@ https://xdenb43.github.io/mikrotik-wizardbook/
 - 📜 RouterOS Scripts
 - 🛠️ Utilities
 
----
-
 ## Design Principles
 
 This project follows several simple principles:
@@ -50,8 +42,6 @@ This project follows several simple principles:
 - Keep examples reproducible
 - Document limitations and trade-offs
 - Avoid unnecessary complexity
-
----
 
 ## Project Status
 
@@ -64,8 +54,6 @@ Current focus:
 - Small Office
 - Enterprise deployment practices
 
----
-
 ## Technology Stack
 
 - MkDocs
@@ -73,20 +61,14 @@ Current focus:
 - GitHub Pages
 - GitHub Actions
 
----
-
 ## Contributing
 
 Suggestions, corrections and discussions are welcome.
 
 If you find inaccurate information or have a better engineering approach, please open an Issue or submit a Pull Request.
 
----
-
 ## License
 
 This project is licensed under the MIT License.
-
----
 
 > *Knowledge becomes valuable only when it is shared, understood and reproducible.*
