@@ -21,7 +21,6 @@ Schakal lists: <https://4pda.to/forum/index.php?showtopic=275091&st=7980#entry89
 Original link: <https://schakal.ru/hosts/alive_hosts.txt>    
 Secondary Link: <https://schakal.hopto.org/alive_hosts.txt>  
 
-
 Some sites have to be whitelisted, info can be found [here](https://4pda.to/forum/index.php?showtopic=275091&st=9040#entry94846826)  
 
 ---  
@@ -42,6 +41,6 @@ add address-list=AdsWhitelist comment="Huawei Weather app" name=hw.zuimeitianqi.
 
 # adList
 /ip dns adlist
-add ssl-verify=no url=https://schakal.hopto.org/alive_hosts.txt
+add url=https://schakal.ru/hosts/alive_hosts.txt
 ```
 ---  
