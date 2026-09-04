@@ -18,19 +18,11 @@ Unlike traditional documentation, this project emphasizes real-world deployment 
 
 The primary goal is to explain not only **how** to configure RouterOS, but also **why** a particular solution should be used.
 
-<p align="right">
-  <a href="#top">⬆️ Top</a>
-</p>
-
 ## Documentation
 
 📖 **Online documentation**
 
 https://xdenb43.github.io/mikrotik-wizardbook/
-
-<p align="right">
-  <a href="#top">⬆️ Top</a>
-</p>
 
 ## Current Topics
 
@@ -42,10 +34,6 @@ https://xdenb43.github.io/mikrotik-wizardbook/
 - 📜 RouterOS Scripts
 - 🛠️ Utilities
 
-<p align="right">
-  <a href="#top">⬆️ Top</a>
-</p>
-
 ## Design Principles
 
 This project follows several simple principles:
@@ -55,10 +43,6 @@ This project follows several simple principles:
 - Keep examples reproducible
 - Document limitations and trade-offs
 - Avoid unnecessary complexity
-
-<p align="right">
-  <a href="#top">⬆️ Top</a>
-</p>
 
 ## Project Status
 
@@ -71,10 +55,6 @@ Current focus:
 - Small Office
 - Enterprise deployment practices
 
-<p align="right">
-  <a href="#top">⬆️ Top</a>
-</p>
-
 ## Technology Stack
 
 - MkDocs
@@ -82,19 +62,11 @@ Current focus:
 - GitHub Pages
 - GitHub Actions
 
-<p align="right">
-  <a href="#top">⬆️ Top</a>
-</p>
-
 ## Contributing
 
 Suggestions, corrections and discussions are welcome.
 
 If you find inaccurate information or have a better engineering approach, please open an Issue or submit a Pull Request.
-
-<p align="right">
-  <a href="#top">⬆️ Top</a>
-</p>
 
 ## License
 
