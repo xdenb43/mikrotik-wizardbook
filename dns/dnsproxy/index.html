@@ -94,10 +94,10 @@ if (is_top_frame) { $('body').addClass('wm-top-page'); }
 
     <h1 id="adguard-dnsproxy">AdGuard dnsproxy</h1>
 <p>Official doc: <a href="https://github.com/AdguardTeam/dnsproxy/blob/master/README.md">https://github.com/AdguardTeam/dnsproxy/blob/master/README.md</a>  </p>
-<hr />
 <div class="admonition note">
 <p>Can be used via <a href="https://manual.mikrotik.com/docs/containers/">container</a> only  </p>
 </div>
+<hr />
 <h2 id="how-to-setup">How To Setup</h2>
 <p>Original instruction: <a href="https://hub.docker.com/r/wiktorbgu/dnsproxy-mikrotik">dnsproxy container</a> by <a href="https://hub.docker.com/u/wiktorbgu">@wiktobgu</a></p>
 <h2 id="parameters-for-mikrotik-as-dns-relay">Parameters for MikroTik as DNS relay</h2>
@@ -143,11 +143,7 @@ set layer-dir=/usb1/docker/layer \
     tmpdir=/usb1/docker/pull
 
 /container 
-add cmd=&quot;--listen=0.0.0.0 --port=53 \
-    --http3 --dnssec --pending-requests-enabled \
-    --upstream=https://dns.google/dns-query \
-    --upstream=https://cloudflare-dns.com/dns-query \
-    --fallback=https://common.dot.dns.yandex.net/dns-query&quot; \
+add cmd=&quot;--listen=0.0.0.0 --port=53 --http3 --dnssec --pending-requests-enabled --upstream=https://dns.google/dns-query --upstream=https://cloudflare-dns.com/dns-query --fallback=https://common.dot.dns.yandex.net/dns-query&quot; \
     dns=8.8.8.8,8.8.4.4,1.0.0.1,208.67.222.222,77.88.8.8 \
     interface=DNSPROXY \
     layer-dir=/usb1/docker/layer \
@@ -165,6 +161,13 @@ add cmd=&quot;--listen=0.0.0.0 --port=53 \
 /ip dhcp-client set use-peer-dns=no numbers=0
 /interface lte apn set [ find default=yes ] use-peer-dns=no  
 
+# Redirecting all DNS requests to the router
+/ip firewall nat
+add action=redirect chain=dstnat comment=&quot;Incoming DNS redirect&quot; \
+    dst-address-type=!local dst-port=53 in-interface-list=LAN protocol=udp
+add action=redirect chain=dstnat comment=&quot;Incoming DNS redirect&quot; \
+    dst-address-type=!local dst-port=53 in-interface-list=LAN protocol=tcp
+
 # Fallback to Google DoH when dnsproxy down
 # Add static record to reduce the risk of interception of the dns.google resolution
 /ip dns static
@@ -175,11 +178,8 @@ add address=8.8.4.4 comment=&quot;Google DNS&quot; name=dns.google type=A
 add comment=&quot;container dnsproxy-mikrotik&quot; disabled=no \
     dns-server=192.168.254.11 \
     host=ya.ru name=dnsproxy-mikrotik test-script=&quot;&quot; type=dns \
-    down-script=&quot;/ip/dns/set servers=8.8.8.8,8.8.4.4,1.0.0.1,208.\
-    67.222.222,77.88.8.8 use-doh-server=https://dns.google/dns-query \
-    verify-doh-cert=yes\n/ip/dns/cache/flush&quot; \
-    up-script=&quot;/ip/dns/set servers=192.168.254.11 use-doh-server=\&quot;\&quot; \
-    \n/ip/dns/cache/flush&quot;
+    down-script=&quot;/ip/dns/set servers=8.8.8.8,8.8.4.4,1.0.0.1,208.67.222.222,77.88.8.8 use-doh-server=https://dns.google/dns-query verify-doh-cert=yes\n/ip/dns/cache/flush&quot; \
+    up-script=&quot;/ip/dns/set servers=192.168.254.11 use-doh-server=\&quot;\&quot;\n/ip/dns/cache/flush&quot;
 </code></pre>
 <div class="admonition seealso">
 <p class="admonition-title">see also</p>
@@ -188,12 +188,24 @@ add comment=&quot;container dnsproxy-mikrotik&quot; disabled=no \
 <hr />
 <h2 id="additional-dnsproxy-as-direct-lan-dns-resolver">Additional: dnsproxy as direct LAN DNS resolver</h2>
 <div class="admonition info">
-<p>case for dnsproxy is announced via DHCP server  </p>
+<p>case for dnsproxy is announced via DHCP server<br />
+full setup is not exampled and left up to network administrator</p>
 </div>
 <pre><code class="language-bash">/ip/dhcp-server/network/set dns-server=192.168.254.11
 /ip dns set allow-remote-requests=no
+
+/ip firewall nat
+add action=netmap chain=dstnat comment=&quot;Incoming DNS redirect&quot; \
+    dst-address-type=!local dst-port=53 in-interface-list=LAN protocol=udp \
+    to-addresses=192.168.254.11 to-ports=53
+add action=netmap chain=dstnat comment=&quot;Incoming DNS redirect&quot; \
+    dst-address-type=!local dst-port=53 in-interface-list=LAN protocol=tcp \
+    to-addresses=192.168.254.11 to-ports=53
+
+# fallback need to be redesigned
+/tool/netwatch/disable dnsproxy-mikrotik
 </code></pre>
-<p>Recommended values</p>
+<p>Recommended values (hAP ax³)</p>
 <pre><code class="language-bash">--listen=0.0.0.0 \
 --port=53 \
 --cache \
