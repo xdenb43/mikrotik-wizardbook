@@ -1,11 +1,11 @@
 # AdGuard dnsproxy
 Official doc: <https://github.com/AdguardTeam/dnsproxy/blob/master/README.md>  
 
----  
-
 !!! note ""  
     Can be used via [container](https://manual.mikrotik.com/docs/containers/) only  
-        
+
+---  
+       
 ## How To Setup
 Original instruction: [dnsproxy container](https://hub.docker.com/r/wiktorbgu/dnsproxy-mikrotik) by [@wiktobgu](https://hub.docker.com/u/wiktorbgu)
 
@@ -52,11 +52,7 @@ set layer-dir=/usb1/docker/layer \
     tmpdir=/usb1/docker/pull
 
 /container 
-add cmd="--listen=0.0.0.0 --port=53 \
-    --http3 --dnssec --pending-requests-enabled \
-    --upstream=https://dns.google/dns-query \
-    --upstream=https://cloudflare-dns.com/dns-query \
-    --fallback=https://common.dot.dns.yandex.net/dns-query" \
+add cmd="--listen=0.0.0.0 --port=53 --http3 --dnssec --pending-requests-enabled --upstream=https://dns.google/dns-query --upstream=https://cloudflare-dns.com/dns-query --fallback=https://common.dot.dns.yandex.net/dns-query" \
     dns=8.8.8.8,8.8.4.4,1.0.0.1,208.67.222.222,77.88.8.8 \
     interface=DNSPROXY \
     layer-dir=/usb1/docker/layer \
@@ -74,6 +70,13 @@ add cmd="--listen=0.0.0.0 --port=53 \
 /ip dhcp-client set use-peer-dns=no numbers=0
 /interface lte apn set [ find default=yes ] use-peer-dns=no  
 
+# Redirecting all DNS requests to the router
+/ip firewall nat
+add action=redirect chain=dstnat comment="Incoming DNS redirect" \
+    dst-address-type=!local dst-port=53 in-interface-list=LAN protocol=udp
+add action=redirect chain=dstnat comment="Incoming DNS redirect" \
+    dst-address-type=!local dst-port=53 in-interface-list=LAN protocol=tcp
+
 # Fallback to Google DoH when dnsproxy down
 # Add static record to reduce the risk of interception of the dns.google resolution
 /ip dns static
@@ -84,11 +87,8 @@ add address=8.8.4.4 comment="Google DNS" name=dns.google type=A
 add comment="container dnsproxy-mikrotik" disabled=no \
     dns-server=192.168.254.11 \
     host=ya.ru name=dnsproxy-mikrotik test-script="" type=dns \
-    down-script="/ip/dns/set servers=8.8.8.8,8.8.4.4,1.0.0.1,208.\
-    67.222.222,77.88.8.8 use-doh-server=https://dns.google/dns-query \
-    verify-doh-cert=yes\n/ip/dns/cache/flush" \
-    up-script="/ip/dns/set servers=192.168.254.11 use-doh-server=\"\" \
-    \n/ip/dns/cache/flush"
+    down-script="/ip/dns/set servers=8.8.8.8,8.8.4.4,1.0.0.1,208.67.222.222,77.88.8.8 use-doh-server=https://dns.google/dns-query verify-doh-cert=yes\n/ip/dns/cache/flush" \
+    up-script="/ip/dns/set servers=192.168.254.11 use-doh-server=\"\"\n/ip/dns/cache/flush"
 ```
 !!! seealso "see also"    
     [:: Optimization for DNS and DoH parameters ::](doh.md/#doh-and-dns-tuning)   
@@ -98,12 +98,24 @@ add comment="container dnsproxy-mikrotik" disabled=no \
 ## Additional: dnsproxy as direct LAN DNS resolver  
 !!! info "" 
     case for dnsproxy is announced via DHCP server  
+    full setup is not exampled and left up to network administrator
 
 ```bash
 /ip/dhcp-server/network/set dns-server=192.168.254.11
 /ip dns set allow-remote-requests=no
+
+/ip firewall nat
+add action=netmap chain=dstnat comment="Incoming DNS redirect" \
+    dst-address-type=!local dst-port=53 in-interface-list=LAN protocol=udp \
+    to-addresses=192.168.254.11 to-ports=53
+add action=netmap chain=dstnat comment="Incoming DNS redirect" \
+    dst-address-type=!local dst-port=53 in-interface-list=LAN protocol=tcp \
+    to-addresses=192.168.254.11 to-ports=53
+
+# fallback need to be redesigned
+/tool/netwatch/disable dnsproxy-mikrotik
 ```
-Recommended values
+Recommended values (hAP ax³)
 ```bash
 --listen=0.0.0.0 \
 --port=53 \
